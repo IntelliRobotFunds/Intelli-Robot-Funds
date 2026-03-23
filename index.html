@@ -177,6 +177,12 @@ function doRegister() {
 
   if (!email || !pass) return alert("Completa email y contraseña");
 
+  // Configuración para que el link sepa a dónde volver
+  const actionCodeSettings = {
+    url: 'https://intellirobotfunds.github.io', // TU URL EXACTA
+    handleCodeInApp: true
+  };
+
   auth.createUserWithEmailAndPassword(email, pass)
     .then(cred => {
       db.collection('users').doc(cred.user.uid).set({
@@ -184,9 +190,15 @@ function doRegister() {
         capital: 0,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      cred.user.sendEmailVerification();
+      
+      // Enviamos la verificación pasando la configuración de retorno
+      return cred.user.sendEmailVerification(actionCodeSettings);
+    })
+    .then(() => {
       alert("Cuenta creada.\nRevisa tu correo (incluye spam) y verifica antes de iniciar sesión.");
       hideRegisterModal();
+      // Opcional: desloguear al usuario para que deba loguearse tras verificar
+      auth.signOut(); 
     })
     .catch(err => alert(err.message));
 }
