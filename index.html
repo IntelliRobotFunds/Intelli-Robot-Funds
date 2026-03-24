@@ -70,7 +70,7 @@
 <div id="step2Modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
   <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-lg border border-zinc-700">
     <h3 class="text-xl font-bold mb-6 text-center text-emerald-400">Seleccionar Moneda</h3>
-    <p class="text-xs text-orange-400 mb-4 font-bold text-center uppercase tracking-widest">Red: BSC (BEP20) Únicamente</p>
+    <p class="text-xs text-orange-400 mb-4 font-bold text-center uppercase">Red: BSC (BEP20) Únicamente</p>
     
     <select id="coinSelect" onchange="updateAddressDisplay()" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none focus:border-emerald-500">
       <option value="btc">Bitcoin (BTC)</option>
@@ -103,19 +103,12 @@
   <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-md border border-red-500/30">
     <h3 class="text-xl font-bold mb-4 text-center">Solicitar Retiro</h3>
     <p class="text-zinc-400 mb-6 text-sm">Ingrese el monto que desea retirar de su cuenta.</p>
-    
     <div class="relative mb-6">
       <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
-      <input id="withdrawAmount" type="number" placeholder="0.00" 
-        class="w-full p-4 pl-8 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-2xl font-bold outline-none focus:border-red-500">
+      <input id="withdrawAmount" type="number" placeholder="0.00" class="w-full p-4 pl-8 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-2xl font-bold outline-none focus:border-red-500">
     </div>
-
-    <button onclick="confirmWithdrawal()" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold mb-4">
-      Confirmar Retiro
-    </button>
-    <button onclick="document.getElementById('withdrawalModal').classList.add('hidden')" class="w-full text-zinc-500 text-sm text-center">
-      Cancelar
-    </button>
+    <button onclick="confirmWithdrawal()" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold mb-4">Confirmar Retiro</button>
+    <button onclick="document.getElementById('withdrawalModal').classList.add('hidden')" class="w-full text-zinc-500 text-sm text-center">Cancelar</button>
   </div>
 </div>
 
@@ -150,30 +143,40 @@
         <div id="gananciaDia" class="text-4xl font-bold">0.00</div>
       </div>
     </div>
-
     <div class="flex flex-col sm:flex-row gap-6 mb-16">
-      <button onclick="startInvestment()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition transform hover:scale-[1.02]">
-        Invertir Ahora
-      </button>
-      <button onclick="requestWithdrawal()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-6 rounded-3xl text-2xl font-bold transition border border-zinc-700 transform hover:scale-[1.02]">
-        Solicitar Retiro
-      </button>
+      <button onclick="startInvestment()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition transform hover:scale-[1.02]">Invertir Ahora</button>
+      <button onclick="requestWithdrawal()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-6 rounded-3xl text-2xl font-bold transition border border-zinc-700 transform hover:scale-[1.02]">Solicitar Retiro</button>
     </div>
   </div>
 
-  <div id="adminPanel" class="hidden bg-zinc-900 p-8 rounded-3xl border border-emerald-500/30">
-    <h2 class="text-2xl font-bold mb-8 text-emerald-400">Gestión de Usuarios</h2>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left">
-        <thead>
-          <tr class="border-b border-zinc-800 text-zinc-500 text-sm uppercase">
-            <th class="py-4 px-4">Usuario</th>
-            <th class="py-4 px-4">Estado / Capital</th>
-            <th class="py-4 px-4 text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="usersBody"></tbody>
-      </table>
+  <div id="adminPanel" class="hidden">
+    <div class="bg-zinc-900 p-8 rounded-3xl border border-emerald-500/30 mb-8">
+      <h2 class="text-2xl font-bold mb-6 text-emerald-400">Cierre de Mercado Diario</h2>
+      <div class="flex flex-col md:flex-row items-end gap-6 bg-black/40 p-6 rounded-2xl border border-zinc-800">
+        <div class="flex-1">
+          <label class="text-xs text-zinc-500 uppercase font-bold mb-2 block">Porcentaje de Ganancia Hoy (%)</label>
+          <input id="dailyPercent" type="number" step="0.01" placeholder="Ej: 0.5" class="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl text-white font-bold outline-none focus:border-emerald-500">
+        </div>
+        <button onclick="processDailyClosure()" class="bg-emerald-600 hover:bg-emerald-500 px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition transform active:scale-95">
+          Ejecutar Cierre Global
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
+      <h2 class="text-2xl font-bold mb-8 text-white">Gestión de Usuarios</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left">
+          <thead>
+            <tr class="border-b border-zinc-800 text-zinc-500 text-sm uppercase">
+              <th class="py-4 px-4">Usuario</th>
+              <th class="py-4 px-4">Estado / Capital</th>
+              <th class="py-4 px-4 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -196,7 +199,7 @@ const ADMIN_EMAIL = "mora87466@gmail.com";
 const wallets = {
   btc: "bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh",
   eth: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-  usdt: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" // Cambiar por tu dirección real BEP20
+  usdt: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
 };
 
 // --- AUTH LOGIC ---
@@ -211,13 +214,7 @@ async function doRegister() {
   if(!e || !p) return alert("Completa los campos");
   try {
     const cred = await auth.createUserWithEmailAndPassword(e, p);
-    await db.collection('users').doc(cred.user.uid).set({ 
-      email: e, 
-      capital: 0, 
-      pending: false,
-      pendingType: '',
-      pendingAmount: 0
-    });
+    await db.collection('users').doc(cred.user.uid).set({ email: e, capital: 0, pending: false, pendingType: '', pendingAmount: 0 });
     await cred.user.sendEmailVerification({ url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' });
     alert("Cuenta creada. Revisa tu email.");
     await auth.signOut();
@@ -248,11 +245,7 @@ function updateAddressDisplay() {
 }
 async function confirmDeposit() {
   try {
-    await db.collection('users').doc(auth.currentUser.uid).update({ 
-      pending: true,
-      pendingType: 'DEPÓSITO',
-      pendingAmount: 0 
-    });
+    await db.collection('users').doc(auth.currentUser.uid).update({ pending: true, pendingType: 'DEPÓSITO', pendingAmount: 0 });
     document.getElementById('step2Modal').classList.add('hidden');
     document.getElementById('step3Modal').classList.remove('hidden');
   } catch(err) { alert(err.message); }
@@ -263,40 +256,50 @@ function requestWithdrawal() { document.getElementById('withdrawalModal').classL
 async function confirmWithdrawal() {
   const amtInput = document.getElementById('withdrawAmount');
   const amt = parseFloat(amtInput.value);
-  const user = auth.currentUser;
-
-  if (!amt || amt <= 0) return alert("Por favor, ingrese un monto válido.");
-
+  if(!amt || amt <= 0) return alert("Ingrese un monto válido");
+  
   try {
-    // 1. Obtenemos los datos actuales del usuario desde Firestore
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    const currentCapital = userDoc.data().capital || 0;
+    const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+    const cap = userDoc.data().capital || 0;
+    if (amt > cap) return alert(`Fondos insuficientes. Capital actual: $${cap}`);
 
-    // 2. Validamos que no intente retirar más de lo que tiene
-    if (amt > currentCapital) {
-      alert(`Error: No tienes fondos suficientes. \nTu capital actual es: $${currentCapital.toFixed(2)}`);
-      return; // Detenemos la ejecución aquí
-    }
-
-    // 3. Si tiene saldo suficiente, procedemos con la solicitud
-    await db.collection('users').doc(user.uid).update({ 
-      pending: true,
-      pendingType: 'RETIRO',
-      pendingAmount: amt
-    });
-    
+    await db.collection('users').doc(auth.currentUser.uid).update({ pending: true, pendingType: 'RETIRO', pendingAmount: amt });
     document.getElementById('withdrawalModal').classList.add('hidden');
-    amtInput.value = ""; // Limpiamos el input
-    alert(`Solicitud de retiro por $${amt} enviada. El administrador procesará su pago en breve.`);
-    
-  } catch (err) {
-    console.error(err);
-    alert("Hubo un error al procesar la solicitud: " + err.message);
-  }
+    amtInput.value = "";
+    alert("Solicitud enviada.");
+  } catch(err) { alert(err.message); }
 }
 
-function closeInvestmentFlow() {
-  document.querySelectorAll('[id^="step"]').forEach(m => m.classList.add('hidden'));
+function closeInvestmentFlow() { document.querySelectorAll('[id^="step"]').forEach(m => m.classList.add('hidden')); }
+
+// --- CIERRE DIARIO (ADMIN) ---
+async function processDailyClosure() {
+  const percent = parseFloat(document.getElementById('dailyPercent').value);
+  if (isNaN(percent) || percent <= 0) return alert("Por favor ingresa un porcentaje válido.");
+  
+  if (!confirm(`¿Estás seguro de sumar un ${percent}% a TODOS los usuarios?`)) return;
+
+  const usersRef = db.collection('users');
+  try {
+    const snapshot = await usersRef.get();
+    const batch = db.batch(); // Usamos batch para procesar todo junto
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.email !== ADMIN_EMAIL && data.capital > 0) {
+        const currentCap = data.capital;
+        const profit = currentCap * (percent / 100);
+        const newCap = currentCap + profit;
+        batch.update(doc.ref, { capital: newCap });
+      }
+    });
+
+    await batch.commit();
+    alert("¡Cierre completado con éxito! Todos los capitales han sido actualizados.");
+    document.getElementById('dailyPercent').value = "";
+  } catch (err) {
+    alert("Error procesando cierre: " + err.message);
+  }
 }
 
 // --- STATE OBSERVER ---
@@ -332,7 +335,7 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// --- ADMIN FUNCTIONS ---
+// --- ADMIN LIST ---
 function loadUsers() {
   const tbody = document.getElementById('usersBody');
   db.collection('users').onSnapshot(snap => {
@@ -342,24 +345,18 @@ function loadUsers() {
       if(data.email === ADMIN_EMAIL) return;
       const tr = document.createElement('tr');
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/30 transition';
-      
       const badgeClass = data.pendingType === 'RETIRO' ? 'bg-red-500' : 'bg-emerald-500';
       const amountText = data.pendingType === 'RETIRO' ? `: $${data.pendingAmount}` : '';
-
       tr.innerHTML = `
         <td class="py-6 px-4">
           <div class="font-bold">${data.email}</div>
-          ${data.pending ? `
-            <span class="text-[10px] ${badgeClass} text-black px-2 py-0.5 rounded font-black animate-pulse uppercase">
-              ${data.pendingType}${amountText}
-            </span>` : ''}
+          ${data.pending ? `<span class="text-[10px] ${badgeClass} text-black px-2 py-0.5 rounded font-black animate-pulse uppercase">${data.pendingType}${amountText}</span>` : ''}
         </td>
         <td class="py-6 px-4">
-          <input type="number" id="cap-${doc.id}" value="${data.capital || 0}" 
-            class="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 w-32 text-emerald-400 focus:border-emerald-500 outline-none">
+          <input type="number" id="cap-${doc.id}" value="${(data.capital || 0).toFixed(2)}" class="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 w-32 text-emerald-400 focus:border-emerald-500 outline-none">
         </td>
         <td class="py-6 px-4 text-right">
-          <button onclick="saveCapital('${doc.id}')" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-bold mr-2">Guardar</button>
+          <button onclick="saveCapital('${doc.id}')" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-bold mr-2 transition hover:bg-emerald-500">Guardar</button>
           <button onclick="deleteUser('${doc.id}')" class="text-red-500 hover:bg-red-500/10 p-2 rounded-lg">Borrar</button>
         </td>
       `;
@@ -370,13 +367,8 @@ function loadUsers() {
 
 async function saveCapital(uid) {
   const val = parseFloat(document.getElementById(`cap-${uid}`).value);
-  await db.collection('users').doc(uid).update({ 
-    capital: val, 
-    pending: false,
-    pendingType: '',
-    pendingAmount: 0
-  });
-  alert("Actualizado con éxito.");
+  await db.collection('users').doc(uid).update({ capital: val, pending: false, pendingType: '', pendingAmount: 0 });
+  alert("Actualizado.");
 }
 
 function deleteUser(uid) { if(confirm("¿Eliminar usuario?")) db.collection('users').doc(uid).delete(); }
