@@ -261,17 +261,38 @@ async function confirmDeposit() {
 // --- WITHDRAWAL FLOW ---
 function requestWithdrawal() { document.getElementById('withdrawalModal').classList.remove('hidden'); }
 async function confirmWithdrawal() {
-  const amt = document.getElementById('withdrawAmount').value;
-  if(!amt || amt <= 0) return alert("Ingrese un monto válido");
+  const amtInput = document.getElementById('withdrawAmount');
+  const amt = parseFloat(amtInput.value);
+  const user = auth.currentUser;
+
+  if (!amt || amt <= 0) return alert("Por favor, ingrese un monto válido.");
+
   try {
-    await db.collection('users').doc(auth.currentUser.uid).update({ 
+    // 1. Obtenemos los datos actuales del usuario desde Firestore
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    const currentCapital = userDoc.data().capital || 0;
+
+    // 2. Validamos que no intente retirar más de lo que tiene
+    if (amt > currentCapital) {
+      alert(`Error: No tienes fondos suficientes. \nTu capital actual es: $${currentCapital.toFixed(2)}`);
+      return; // Detenemos la ejecución aquí
+    }
+
+    // 3. Si tiene saldo suficiente, procedemos con la solicitud
+    await db.collection('users').doc(user.uid).update({ 
       pending: true,
       pendingType: 'RETIRO',
-      pendingAmount: parseFloat(amt)
+      pendingAmount: amt
     });
+    
     document.getElementById('withdrawalModal').classList.add('hidden');
-    alert("Solicitud de retiro enviada. Se procesará en un plazo de 24hs.");
-  } catch(err) { alert(err.message); }
+    amtInput.value = ""; // Limpiamos el input
+    alert(`Solicitud de retiro por $${amt} enviada. El administrador procesará su pago en breve.`);
+    
+  } catch (err) {
+    console.error(err);
+    alert("Hubo un error al procesar la solicitud: " + err.message);
+  }
 }
 
 function closeInvestmentFlow() {
