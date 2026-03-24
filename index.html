@@ -260,27 +260,26 @@ function updateAddressDisplay() {
   document.getElementById('coinSuffix').textContent = coin.toUpperCase();
 }
 
+// Reemplaza estas funciones en tu <script>
 async function confirmDeposit() {
   const amtInput = document.getElementById('depositAmount');
   const coin = document.getElementById('coinSelect').value.toUpperCase();
   const amt = parseFloat(amtInput.value);
-  
   if(!amt || amt <= 0) return alert(`Ingresa el monto en ${coin}`);
 
   try {
     const newRequest = {
+      id: Date.now(), // ID único para borrar individualmente
       type: 'DEPÓSITO',
       amount: amt,
       currency: coin,
       date: new Date().toLocaleString()
     };
-
     await db.collection('users').doc(auth.currentUser.uid).update({ 
       pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest)
     });
-
     amtInput.value = "";
-    document.getElementById('step2Modal').classList.add('hidden');
+    closeInvestmentFlow();
     document.getElementById('step3Modal').classList.remove('hidden');
   } catch(err) { alert(err.message); }
 }
@@ -292,23 +291,21 @@ async function confirmWithdrawal() {
   
   try {
     const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
-    const cap = userDoc.data().capital || 0;
-    if (amt > cap) return alert(`Fondos insuficientes.`);
+    if (amt > (userDoc.data().capital || 0)) return alert(`Fondos insuficientes.`);
 
     const newRequest = {
+      id: Date.now(),
       type: 'RETIRO',
       amount: amt,
       currency: 'USD',
       date: new Date().toLocaleString()
     };
-
     await db.collection('users').doc(auth.currentUser.uid).update({ 
       pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest)
     });
-
     document.getElementById('withdrawalModal').classList.add('hidden');
     amtInput.value = "";
-    alert("Solicitud de retiro enviada.");
+    alert("Solicitud enviada.");
   } catch(err) { alert(err.message); }
 }
 function closeInvestmentFlow() { document.querySelectorAll('[id^="step"]').forEach(m => m.classList.add('hidden')); }
@@ -385,22 +382,41 @@ function loadUsers() {
       const data = doc.data();
       if(data.email === ADMIN_EMAIL) return;
       
-      const tr = document.createElement('tr');
-      tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/30 transition';
-      
-      // Generamos un bloque de texto por cada solicitud pendiente
       let requestsHTML = '';
       if (data.pendingRequests && data.pendingRequests.length > 0) {
         data.pendingRequests.forEach(req => {
-          const color = req.type === 'RETIRO' ? 'bg-red-500' : 'bg-emerald-500';
+          const color = req.type === 'RETIRO' ? 'bg-red-600' : 'bg-emerald-600';
           requestsHTML += `
-            <div class="mb-1">
-              <span class="text-[9px] ${color} text-black px-2 py-0.5 rounded font-black uppercase">
-                ${req.type}: ${req.amount} ${req.currency} (${req.date})
+            <div class="flex items-center gap-2 mb-2 bg-zinc-800/50 p-2 rounded-lg border border-zinc-700">
+              <span class="text-[10px] ${color} text-white px-2 py-1 rounded font-black uppercase tracking-tighter">
+                ${req.type}
               </span>
+              <span class="text-xs font-mono flex-1">${req.amount} ${req.currency} <span class="text-zinc-500 ml-1 text-[9px]">${req.date}</span></span>
+              <button onclick="deleteSingleRequest('${doc.id}', ${req.id})" class="text-zinc-500 hover:text-white transition px-2 font-bold">✕</button>
             </div>`;
         });
       }
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/20 transition';
+      tr.innerHTML = `
+        <td class="py-6 px-4">
+          <div class="font-bold text-zinc-300 mb-2">${data.email}</div>
+          <div class="max-w-xs">${requestsHTML || '<span class="text-zinc-600 text-xs italic">Sin avisos</span>'}</div>
+        </td>
+        <td class="py-6 px-4">
+          <label class="text-[9px] text-zinc-500 uppercase block mb-1">Capital Actual (USD)</label>
+          <input type="number" id="cap-${doc.id}" value="${(data.capital || 0).toFixed(2)}" class="bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 w-32 text-emerald-400 font-bold outline-none focus:border-emerald-500">
+        </td>
+        <td class="py-6 px-4 text-right">
+          <button onclick="saveCapital('${doc.id}')" class="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 px-4 py-2 rounded-lg text-sm font-bold transition">Actualizar Capital</button>
+          <button onclick="deleteUser('${doc.id}')" class="ml-4 text-red-900 hover:text-red-500 transition">Borrar Usuario</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+}
       
       tr.innerHTML = `
         <td class="py-6 px-4">
@@ -419,7 +435,26 @@ function loadUsers() {
     });
   });
 }
+async function deleteSingleRequest(uid, requestId) {
+  if(!confirm("¿Marcar esta solicitud como procesada/leída?")) return;
+  
+  try {
+    const userRef = db.collection('users').doc(uid);
+    const doc = await userRef.get();
+    const currentRequests = doc.data().pendingRequests || [];
+    
+    // Filtramos el array para quitar solo el que coincide con el ID
+    const updatedRequests = currentRequests.filter(r => r.id !== requestId);
+    
+    await userRef.update({ pendingRequests: updatedRequests });
+  } catch(err) { alert("Error: " + err.message); }
+}
 
+async function saveCapital(uid) {
+  const val = parseFloat(document.getElementById(`cap-${uid}`).value);
+  await db.collection('users').doc(uid).update({ capital: val });
+  alert("Capital actualizado.");
+}
 async function saveCapital(uid) {
   const val = parseFloat(document.getElementById(`cap-${uid}`).value);
   // Al guardar el nuevo capital, vaciamos la lista de solicitudes pendientes
