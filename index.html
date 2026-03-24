@@ -70,7 +70,7 @@
 <div id="step2Modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
   <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-lg border border-zinc-700">
     <h3 class="text-xl font-bold mb-6 text-center text-emerald-400">Seleccionar Moneda</h3>
-    <p class="text-xs text-orange-400 mb-4 font-bold text-center">RED: BSC (BEP20) ÚNICAMENTE</p>
+    <p class="text-xs text-orange-400 mb-4 font-bold text-center uppercase tracking-widest">Red: BSC (BEP20) Únicamente</p>
     
     <select id="coinSelect" onchange="updateAddressDisplay()" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none focus:border-emerald-500">
       <option value="btc">Bitcoin (BTC)</option>
@@ -99,6 +99,26 @@
   </div>
 </div>
 
+<div id="withdrawalModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
+  <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-md border border-red-500/30">
+    <h3 class="text-xl font-bold mb-4 text-center">Solicitar Retiro</h3>
+    <p class="text-zinc-400 mb-6 text-sm">Ingrese el monto que desea retirar de su cuenta.</p>
+    
+    <div class="relative mb-6">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
+      <input id="withdrawAmount" type="number" placeholder="0.00" 
+        class="w-full p-4 pl-8 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-2xl font-bold outline-none focus:border-red-500">
+    </div>
+
+    <button onclick="confirmWithdrawal()" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold mb-4">
+      Confirmar Retiro
+    </button>
+    <button onclick="document.getElementById('withdrawalModal').classList.add('hidden')" class="w-full text-zinc-500 text-sm text-center">
+      Cancelar
+    </button>
+  </div>
+</div>
+
 <section id="heroSection" class="hero">
   <div class="max-w-5xl px-6 pt-20 text-center">
     <h1 class="text-5xl md:text-7xl font-bold mb-6">Inversión Inteligente</h1>
@@ -118,22 +138,27 @@
   <div id="userStats" class="hidden">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-center">
       <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
-        <p class="text-zinc-500 text-sm mb-2 uppercase">Capital Invertido</p>
+        <p class="text-zinc-500 text-sm mb-2 uppercase tracking-tighter">Capital Invertido (USD)</p>
         <div id="capitalDisplay" class="text-5xl font-bold">0.00</div>
       </div>
       <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
-        <p class="text-emerald-400 text-sm mb-2 uppercase">Ganancia/Hora</p>
+        <p class="text-emerald-400 text-sm mb-2 uppercase tracking-tighter">Ganancia/Hora</p>
         <div id="gananciaHora" class="text-4xl font-bold">0.00</div>
       </div>
       <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
-        <p class="text-emerald-400 text-sm mb-2 uppercase">Ganancia/Día</p>
+        <p class="text-emerald-400 text-sm mb-2 uppercase tracking-tighter">Ganancia/Día</p>
         <div id="gananciaDia" class="text-4xl font-bold">0.00</div>
       </div>
     </div>
 
-    <button onclick="startInvestment()" class="w-full bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition transform hover:scale-[1.02]">
-      Invertir Ahora
-    </button>
+    <div class="flex flex-col sm:flex-row gap-6 mb-16">
+      <button onclick="startInvestment()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition transform hover:scale-[1.02]">
+        Invertir Ahora
+      </button>
+      <button onclick="requestWithdrawal()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-6 rounded-3xl text-2xl font-bold transition border border-zinc-700 transform hover:scale-[1.02]">
+        Solicitar Retiro
+      </button>
+    </div>
   </div>
 
   <div id="adminPanel" class="hidden bg-zinc-900 p-8 rounded-3xl border border-emerald-500/30">
@@ -171,7 +196,7 @@ const ADMIN_EMAIL = "mora87466@gmail.com";
 const wallets = {
   btc: "bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh",
   eth: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-  usdt: "TU_DIRECCION_USDT_BEP20_AQUÍ"
+  usdt: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" // Cambiar por tu dirección real BEP20
 };
 
 // --- AUTH LOGIC ---
@@ -183,9 +208,16 @@ function hideRegisterModal() { document.getElementById('registerModal').classLis
 async function doRegister() {
   const e = document.getElementById('regEmail').value.trim();
   const p = document.getElementById('regPass').value;
+  if(!e || !p) return alert("Completa los campos");
   try {
     const cred = await auth.createUserWithEmailAndPassword(e, p);
-    await db.collection('users').doc(cred.user.uid).set({ email: e, capital: 0, pending: false });
+    await db.collection('users').doc(cred.user.uid).set({ 
+      email: e, 
+      capital: 0, 
+      pending: false,
+      pendingType: '',
+      pendingAmount: 0
+    });
     await cred.user.sendEmailVerification({ url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' });
     alert("Cuenta creada. Revisa tu email.");
     await auth.signOut();
@@ -215,12 +247,33 @@ function updateAddressDisplay() {
   document.getElementById('addressDisplay').textContent = wallets[coin];
 }
 async function confirmDeposit() {
-  const user = auth.currentUser;
-  // Marcamos al usuario con un "aviso" en la base de datos
-  await db.collection('users').doc(user.uid).update({ pending: true });
-  document.getElementById('step2Modal').classList.add('hidden');
-  document.getElementById('step3Modal').classList.remove('hidden');
+  try {
+    await db.collection('users').doc(auth.currentUser.uid).update({ 
+      pending: true,
+      pendingType: 'DEPÓSITO',
+      pendingAmount: 0 
+    });
+    document.getElementById('step2Modal').classList.add('hidden');
+    document.getElementById('step3Modal').classList.remove('hidden');
+  } catch(err) { alert(err.message); }
 }
+
+// --- WITHDRAWAL FLOW ---
+function requestWithdrawal() { document.getElementById('withdrawalModal').classList.remove('hidden'); }
+async function confirmWithdrawal() {
+  const amt = document.getElementById('withdrawAmount').value;
+  if(!amt || amt <= 0) return alert("Ingrese un monto válido");
+  try {
+    await db.collection('users').doc(auth.currentUser.uid).update({ 
+      pending: true,
+      pendingType: 'RETIRO',
+      pendingAmount: parseFloat(amt)
+    });
+    document.getElementById('withdrawalModal').classList.add('hidden');
+    alert("Solicitud de retiro enviada. Se procesará en un plazo de 24hs.");
+  } catch(err) { alert(err.message); }
+}
+
 function closeInvestmentFlow() {
   document.querySelectorAll('[id^="step"]').forEach(m => m.classList.add('hidden'));
 }
@@ -268,10 +321,17 @@ function loadUsers() {
       if(data.email === ADMIN_EMAIL) return;
       const tr = document.createElement('tr');
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/30 transition';
+      
+      const badgeClass = data.pendingType === 'RETIRO' ? 'bg-red-500' : 'bg-emerald-500';
+      const amountText = data.pendingType === 'RETIRO' ? `: $${data.pendingAmount}` : '';
+
       tr.innerHTML = `
         <td class="py-6 px-4">
           <div class="font-bold">${data.email}</div>
-          ${data.pending ? '<span class="text-[10px] bg-emerald-500 text-black px-2 py-0.5 rounded-full font-black animate-pulse uppercase">Depósito Pendiente</span>' : ''}
+          ${data.pending ? `
+            <span class="text-[10px] ${badgeClass} text-black px-2 py-0.5 rounded font-black animate-pulse uppercase">
+              ${data.pendingType}${amountText}
+            </span>` : ''}
         </td>
         <td class="py-6 px-4">
           <input type="number" id="cap-${doc.id}" value="${data.capital || 0}" 
@@ -289,9 +349,13 @@ function loadUsers() {
 
 async function saveCapital(uid) {
   const val = parseFloat(document.getElementById(`cap-${uid}`).value);
-  // Al guardar el capital, asumimos que el admin ya revisó el depósito, así que quitamos el aviso "pending"
-  await db.collection('users').doc(uid).update({ capital: val, pending: false });
-  alert("Capital actualizado y aviso de depósito limpiado.");
+  await db.collection('users').doc(uid).update({ 
+    capital: val, 
+    pending: false,
+    pendingType: '',
+    pendingAmount: 0
+  });
+  alert("Actualizado con éxito.");
 }
 
 function deleteUser(uid) { if(confirm("¿Eliminar usuario?")) db.collection('users').doc(uid).delete(); }
