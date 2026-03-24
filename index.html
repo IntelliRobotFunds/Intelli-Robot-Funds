@@ -213,13 +213,20 @@ auth.onAuthStateChanged(user => {
 // --- FUNCIONES ADMIN ---
 function loadUsers() {
   const tbody = document.getElementById('usersBody');
-  tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center">Cargando lista...</td></tr>';
+  
+  // Usamos onSnapshot para que la lista se actualice sola en tiempo real
+  db.collection('users').onSnapshot(snap => {
+    tbody.innerHTML = ''; // Limpiamos la tabla para recargarla
+    
+    if (snap.empty) {
+      tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-zinc-500">No hay usuarios registrados</td></tr>';
+      return;
+    }
 
-  db.collection('users').get().then(snap => {
-    tbody.innerHTML = '';
     snap.forEach(doc => {
       const data = doc.data();
-      if (data.email === ADMIN_EMAIL) return; // No mostrar al admin en la lista
+      // No te muestres a ti mismo en la lista de gestión de inversión
+      if (data.email === ADMIN_EMAIL) return; 
 
       const tr = document.createElement('tr');
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/50 transition';
@@ -236,6 +243,9 @@ function loadUsers() {
       `;
       tbody.appendChild(tr);
     });
+  }, err => {
+    console.error("Error al leer Firestore: ", err);
+    tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-red-500">Error de permisos: Revisa las Reglas de Firestore en Firebase Console.</td></tr>`;
   });
 }
 
