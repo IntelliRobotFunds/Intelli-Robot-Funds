@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IntelliRobot Funds</title>
+  <title>IntelliRobot Funds - Admin Panel</title>
 
-  <!-- Firebase Compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
@@ -27,26 +25,25 @@
       background: rgba(0,0,0,0.85);
       backdrop-filter: blur(6px);
     }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
 <body>
 
-<!-- Navbar -->
 <nav class="bg-black/90 fixed w-full z-50 border-b border-zinc-800">
   <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
     <div class="flex items-center gap-3">
       <img src="logo.jpg" alt="Logo" class="w-10 h-10 object-contain">
       <span class="text-2xl font-bold">IntelliRobot Funds</span>
     </div>
-    <div class="flex gap-4">
+    <div id="authButtons" class="flex gap-4">
       <button onclick="showLoginModal()" class="bg-emerald-600 hover:bg-emerald-700 px-6 py-2 rounded-full">Iniciar Sesión</button>
       <button onclick="showRegisterModal()" class="border border-emerald-600 hover:bg-emerald-600/30 px-6 py-2 rounded-full">Registrarse</button>
     </div>
   </div>
 </nav>
 
-<!-- Hero -->
-<section class="hero">
+<section id="heroSection" class="hero">
   <div class="max-w-5xl px-6 pt-20">
     <h1 class="text-5xl md:text-7xl font-bold mb-6">Gestión de Fondos de Inversión</h1>
     <p class="text-3xl md:text-5xl text-emerald-400 mb-8">BTC y ETH</p>
@@ -54,88 +51,69 @@
   </div>
 </section>
 
-<!-- Modal Login -->
 <div id="loginModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50">
   <div class="bg-zinc-900 p-10 rounded-2xl w-full max-w-md border border-zinc-700">
     <h2 class="text-3xl font-bold mb-8 text-center">Iniciar Sesión</h2>
-    <input id="loginEmail" type="email" placeholder="Email" class="w-full p-4 mb-4 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500">
-    <input id="loginPass" type="password" placeholder="Contraseña" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500">
+    <input id="loginEmail" type="email" placeholder="Email" class="w-full p-4 mb-4 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white">
+    <input id="loginPass" type="password" placeholder="Contraseña" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white">
     <button onclick="doLogin()" class="w-full bg-emerald-600 hover:bg-emerald-700 py-4 rounded-lg font-bold text-lg">Entrar</button>
     <button onclick="hideLoginModal()" class="mt-4 text-zinc-400 hover:text-white w-full text-center">Cancelar</button>
   </div>
 </div>
 
-<!-- Modal Registro -->
 <div id="registerModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50">
   <div class="bg-zinc-900 p-10 rounded-2xl w-full max-w-md border border-zinc-700">
     <h2 class="text-3xl font-bold mb-8 text-center">Crear Cuenta</h2>
-    <input id="regEmail" type="email" placeholder="Email" class="w-full p-4 mb-4 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500">
-    <input id="regPass" type="password" placeholder="Contraseña" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500">
+    <input id="regEmail" type="email" placeholder="Email" class="w-full p-4 mb-4 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white">
+    <input id="regPass" type="password" placeholder="Contraseña" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-white">
     <button onclick="doRegister()" class="w-full bg-emerald-600 hover:bg-emerald-700 py-4 rounded-lg font-bold text-lg">Registrarse</button>
     <button onclick="hideRegisterModal()" class="mt-4 text-zinc-400 hover:text-white w-full text-center">Cancelar</button>
   </div>
 </div>
 
-<!-- DASHBOARD -->
 <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-24">
   <h1 class="text-5xl font-bold mb-12 text-center">Panel de Control</h1>
 
-  <!-- Saludo y cerrar sesión -->
   <div class="bg-zinc-900 p-8 rounded-2xl border border-zinc-800 mb-12">
     <p class="text-2xl mb-4">Bienvenido, <span id="userEmailDisplay" class="text-emerald-400"></span></p>
-    <p class="text-xl mb-6">Estatus: <span class="text-green-400">Verificado</span></p>
-    <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-lg font-bold">Cerrar Sesión</button>
+    <p class="text-xl mb-6">Estatus: <span id="userRole" class="text-green-400">Usuario Verificado</span></p>
+    <button onclick="logout()" class="bg-red-600 hover:bg-red-700 px-8 py-4 rounded-lg font-bold text-white">Cerrar Sesión</button>
   </div>
 
-  <!-- Datos y ganancias → SOLO para usuarios normales (no admin) -->
   <div id="userStats" class="hidden">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-      <div class="bg-zinc-900 p-8 rounded-3xl">
+      <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
         <p class="text-emerald-400 text-sm mb-2">Capital Invertido (USD)</p>
         <div id="capitalDisplay" class="text-5xl font-bold">0.00</div>
       </div>
-      <div class="bg-zinc-900 p-8 rounded-3xl">
+      <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
         <p class="text-emerald-400 text-sm mb-2">Ganancia por hora</p>
         <div id="gananciaHora" class="text-5xl font-bold text-emerald-400">0.00</div>
       </div>
-      <div class="bg-zinc-900 p-8 rounded-3xl">
+      <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
         <p class="text-emerald-400 text-sm mb-2">Ganancia estimada hoy</p>
         <div id="gananciaDia" class="text-5xl font-bold text-emerald-400">0.00</div>
       </div>
     </div>
-
-    <!-- Direcciones -->
-    <div class="bg-zinc-900 p-8 rounded-3xl mb-12">
-      <h3 class="text-xl mb-6">Direcciones para enviar fondos</h3>
-      <div class="space-y-6">
-        <div>
-          <label class="block text-sm text-zinc-400 mb-2">Bitcoin (BTC)</label>
-          <div class="bg-zinc-800 p-4 rounded-xl break-all font-mono text-sm">bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh</div>
-        </div>
-        <div>
-          <label class="block text-sm text-zinc-400 mb-2">Ethereum (ETH)</label>
-          <div class="bg-zinc-800 p-4 rounded-xl break-all font-mono text-sm">0x742d35Cc6634C0532925a3b844Bc454e4438f44e</div>
-        </div>
+    <div class="bg-zinc-900 p-8 rounded-3xl mb-12 border border-zinc-800">
+      <h3 class="text-xl mb-6 font-bold">Instrucciones de Inversión</h3>
+      <p class="text-zinc-400 mb-6">Envía tus fondos a las siguientes direcciones. Una vez recibido, el administrador actualizará tu capital en un plazo de 24hs.</p>
+      <div class="space-y-4">
+        <div class="bg-zinc-800 p-4 rounded-xl font-mono text-sm break-all">BTC: bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh</div>
+        <div class="bg-zinc-800 p-4 rounded-xl font-mono text-sm break-all">ETH: 0x742d35Cc6634C0532925a3b844Bc454e4438f44e</div>
       </div>
-    </div>
-
-    <!-- Botones -->
-    <div class="flex flex-col sm:flex-row gap-6 mb-16">
-      <button onclick="alert('Envía fondos a las direcciones de arriba. El admin actualizará tu capital.')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold">Invertir Ahora</button>
-      <button onclick="alert('Solicitud de retiro enviada. El admin la procesará manualmente.')" class="flex-1 bg-zinc-700 hover:bg-zinc-600 py-6 rounded-3xl text-2xl font-bold">Solicitar Retiro</button>
     </div>
   </div>
 
-  <!-- Panel SOLO ADMIN -->
-  <div id="adminPanel" class="hidden bg-emerald-950 p-10 rounded-3xl border border-emerald-800">
-    <h2 class="text-3xl font-bold text-emerald-400 mb-8">Sección Administrador</h2>
+  <div id="adminPanel" class="hidden bg-zinc-900 p-10 rounded-3xl border border-emerald-500/30">
+    <h2 class="text-3xl font-bold text-emerald-400 mb-8">Gestión de Usuarios</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-left">
         <thead>
-          <tr class="border-b border-emerald-800">
-            <th class="py-4 px-4 font-semibold">Email</th>
-            <th class="py-4 px-4 font-semibold">Capital USD</th>
-            <th class="py-4 px-4 font-semibold">Acción</th>
+          <tr class="border-b border-zinc-800 text-zinc-400">
+            <th class="py-4 px-4 font-semibold">Email del Usuario</th>
+            <th class="py-4 px-4 font-semibold">Capital Actual (USD)</th>
+            <th class="py-4 px-4 font-semibold">Acciones</th>
           </tr>
         </thead>
         <tbody id="usersBody"></tbody>
@@ -145,8 +123,7 @@
 </div>
 
 <script>
-// ────────────────────────────────────────────────
-// FIREBASE
+// --- CONFIGURACIÓN ---
 const firebaseConfig = {
   apiKey: "AIzaSyDYQUengy7vyNWX_JgaE-wibB5mBnboXxc",
   authDomain: "intellirobotfunds.firebaseapp.com",
@@ -159,170 +136,123 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 const ADMIN_EMAIL = "mora87466@gmail.com";
 
-// ────────────────────────────────────────────────
-// MODALES
+// --- UI HELPERS ---
 function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
 function hideLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
 function showRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
 function hideRegisterModal() { document.getElementById('registerModal').classList.add('hidden'); }
 
-// ────────────────────────────────────────────────
-// REGISTRO + CREAR DOC EN FIRESTORE
+// --- AUTH ---
 function doRegister() {
   const email = document.getElementById('regEmail').value.trim();
-  const pass  = document.getElementById('regPass').value;
-
-  if (!email || !pass) return alert("Completa email y contraseña");
-
-  // Configuración para que el link sepa a dónde volver
-  const actionCodeSettings = {
-    //url: 'https://intellirobotfunds.github.io', // TU URL EXACTA
-    url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/',
-    handleCodeInApp: true
-  };
+  const pass = document.getElementById('regPass').value;
+  if (!email || !pass) return alert("Completa los datos");
 
   auth.createUserWithEmailAndPassword(email, pass)
     .then(cred => {
-      db.collection('users').doc(cred.user.uid).set({
-        email: email,
-        capital: 0,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      
-      // Enviamos la verificación pasando la configuración de retorno
-      return cred.user.sendEmailVerification(actionCodeSettings);
+      db.collection('users').doc(cred.user.uid).set({ email, capital: 0 });
+      return cred.user.sendEmailVerification({ url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' });
     })
-    .then(() => {
-      alert("Cuenta creada.\nRevisa tu correo (incluye spam) y verifica antes de iniciar sesión.");
-      hideRegisterModal();
-      // Opcional: desloguear al usuario para que deba loguearse tras verificar
-      auth.signOut(); 
-    })
+    .then(() => { alert("Verifica tu email antes de entrar."); auth.signOut(); hideRegisterModal(); })
     .catch(err => alert(err.message));
 }
 
-// ────────────────────────────────────────────────
-// LOGIN
 function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
-  const pass  = document.getElementById('loginPass').value;
-
-  if (!email || !pass) return alert("Completa email y contraseña");
-
+  const pass = document.getElementById('loginPass').value;
   auth.signInWithEmailAndPassword(email, pass)
-    .then(cred => cred.user.reload().then(() => cred.user))
-    .then(user => {
-      if (!user.emailVerified) return alert("Verifica tu email primero (revisa spam)");
+    .then(cred => cred.user.reload().then(() => {
+      if (!cred.user.emailVerified) return alert("Verifica tu email primero");
+      hideLoginModal();
+    }))
+    .catch(err => alert(err.message));
+}
 
-      document.getElementById('userEmailDisplay').textContent = user.email;
-      document.getElementById('dashboard').classList.remove('hidden');
+function logout() { auth.signOut().then(() => location.reload()); }
 
-      // Cargar datos personales (para todos)
-      db.collection('users').doc(user.uid).get().then(doc => {
+// --- OBSERVADOR (LÓGICA PRINCIPAL) ---
+auth.onAuthStateChanged(user => {
+  if (user && user.emailVerified) {
+    // UI General al estar logeado
+    document.getElementById('authButtons').classList.add('hidden');
+    document.getElementById('heroSection').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('userEmailDisplay').textContent = user.email;
+
+    if (user.email === ADMIN_EMAIL) {
+      // LOGICA ADMIN
+      document.getElementById('userRole').textContent = "Administrador del Sistema";
+      document.getElementById('adminPanel').classList.remove('hidden');
+      document.getElementById('userStats').classList.add('hidden'); // OCULTA CAPITAL/GANANCIAS
+      loadUsers();
+    } else {
+      // LOGICA USUARIO
+      document.getElementById('userRole').textContent = "Usuario Verificado";
+      document.getElementById('adminPanel').classList.add('hidden');
+      document.getElementById('userStats').classList.remove('hidden'); // MUESTRA CAPITAL/GANANCIAS
+      
+      db.collection('users').doc(user.uid).onSnapshot(doc => {
         if (doc.exists) {
-          const data = doc.data();
-          document.getElementById('capitalDisplay').textContent = (data.capital || 0).toFixed(2);
-          // Actualizar ganancias (simulado)
-          const capital = data.capital || 0;
-          document.getElementById('gananciaHora').textContent = (capital * 0.185 / 365 / 24).toFixed(2);
-          document.getElementById('gananciaDia').textContent = (capital * 0.185 / 365).toFixed(2);
+          const cap = doc.data().capital || 0;
+          document.getElementById('capitalDisplay').textContent = cap.toFixed(2);
+          document.getElementById('gananciaHora').textContent = (cap * 0.185 / 365 / 24).toFixed(2);
+          document.getElementById('gananciaDia').textContent = (cap * 0.185 / 365).toFixed(2);
         }
       });
+    }
+  } else {
+    // UI al estar deslogeado
+    document.getElementById('authButtons').classList.remove('hidden');
+    document.getElementById('heroSection').classList.remove('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+  }
+});
 
-      // Solo admin ve la tabla de usuarios
-      if (user.email === ADMIN_EMAIL) {
-        document.getElementById('adminPanel').classList.remove('hidden');
-        loadUsers();
-      }
+// --- FUNCIONES ADMIN ---
+function loadUsers() {
+  const tbody = document.getElementById('usersBody');
+  tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center">Cargando lista...</td></tr>';
 
-      hideLoginModal();
-    })
+  db.collection('users').get().then(snap => {
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (data.email === ADMIN_EMAIL) return; // No mostrar al admin en la lista
+
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/50 transition';
+      tr.innerHTML = `
+        <td class="py-4 px-4 font-medium">${data.email}</td>
+        <td class="py-4 px-4">
+          <input type="number" id="cap-${doc.id}" value="${data.capital || 0}" 
+            class="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 w-32 text-emerald-400 focus:outline-none focus:border-emerald-500">
+        </td>
+        <td class="py-4 px-4 flex gap-4">
+          <button onclick="updateCapital('${doc.id}')" class="text-emerald-500 hover:text-emerald-400 font-bold">Guardar</button>
+          <button onclick="deleteUser('${doc.id}')" class="text-red-500 hover:text-red-400">Eliminar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+function updateCapital(uid) {
+  const newCap = parseFloat(document.getElementById(`cap-${uid}`).value);
+  if (isNaN(newCap)) return alert("Ingresa un número válido");
+  
+  db.collection('users').doc(uid).update({ capital: newCap })
+    .then(() => alert("Capital actualizado con éxito"))
     .catch(err => alert("Error: " + err.message));
 }
 
-// ────────────────────────────────────────────────
-// Cargar lista de usuarios (solo admin)
-function loadUsers() {
-  const tbody = document.getElementById('usersBody');
-  tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-center">Cargando usuarios...</td></tr>';
-
-  db.collection('users').get()
-    .then(snapshot => {
-      tbody.innerHTML = '';
-      if (snapshot.empty) {
-        tbody.innerHTML = '<tr><td colspan="3" class="py-8 text-center text-yellow-400">No hay usuarios registrados</td></tr>';
-        return;
-      }
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-zinc-700 hover:bg-zinc-800';
-        tr.innerHTML = `
-          <td class="py-4 px-4">${data.email || '—'}</td>
-          <td class="py-4 px-4">${(data.capital || 0).toFixed(2)}</td>
-          <td class="py-4 px-4">
-            <button onclick="deleteUser('${doc.id}')" class="text-red-500 hover:text-red-400">Eliminar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    })
-    .catch(err => {
-      tbody.innerHTML = `<tr><td colspan="3" class="py-8 text-red-500 text-center">Error: ${err.message}</td></tr>`;
-    });
-}
-
 function deleteUser(uid) {
-  if (!confirm('Eliminar usuario PERMANENTEMENTE?')) return;
-  db.collection('users').doc(uid).delete()
-    .then(() => loadUsers())
-    .catch(err => alert('Error al eliminar: ' + err.message));
-}
-
-function logout() {
-  auth.signOut().then(() => location.reload());
-}
-
-// Auto-login y carga de datos
-auth.onAuthStateChanged(user => {
-  if (user) {
-    user.reload().then(() => {
-      if (user.emailVerified) {
-        document.getElementById('userEmailDisplay').textContent = user.email;
-        document.getElementById('dashboard').classList.remove('hidden');
-
-        db.collection('users').doc(user.uid).get().then(doc => {
-          if (doc.exists) {
-            const data = doc.data();
-            const capital = data.capital || 0;
-            document.getElementById('capitalDisplay').textContent = capital.toFixed(2);
-
-            // Ganancias solo si capital > 0 y no es admin
-            if (capital > 0 && user.email !== ADMIN_EMAIL) {
-              document.getElementById('gananciaHora').textContent = (capital * 0.185 / 365 / 24).toFixed(2);
-              document.getElementById('gananciaDia').textContent = (capital * 0.185 / 365).toFixed(2);
-            } else {
-              document.getElementById('gananciaHora').textContent = "0.00";
-              document.getElementById('gananciaDia').textContent = "0.00";
-            }
-          }
-        });
-
-        // Mostrar estadísticas personales a todos
-        document.getElementById('userStats').classList.remove('hidden');
-
-        // Solo admin ve la tabla
-        if (user.email === ADMIN_EMAIL) {
-          document.getElementById('adminPanel').classList.remove('hidden');
-          loadUsers();
-        }
-      }
-    });
+  if (confirm("¿Estás seguro de eliminar este usuario? Esta acción es irreversible.")) {
+    db.collection('users').doc(uid).delete().then(() => loadUsers());
   }
-});
+}
 </script>
 </body>
 </html>
