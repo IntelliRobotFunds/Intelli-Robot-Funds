@@ -435,6 +435,7 @@ function loadUsers() {
     });
   });
 }
+
 async function deleteSingleRequest(uid, requestId) {
   if(!confirm("¿Marcar esta solicitud como procesada/leída?")) return;
   
@@ -454,15 +455,6 @@ async function saveCapital(uid) {
   const val = parseFloat(document.getElementById(`cap-${uid}`).value);
   await db.collection('users').doc(uid).update({ capital: val });
   alert("Capital actualizado.");
-}
-async function saveCapital(uid) {
-  const val = parseFloat(document.getElementById(`cap-${uid}`).value);
-  // Al guardar el nuevo capital, vaciamos la lista de solicitudes pendientes
-  await db.collection('users').doc(uid).update({ 
-    capital: val, 
-    pendingRequests: [] 
-  });
-  alert("Capital actualizado y avisos limpiados.");
 }
 
 function deleteUser(uid) { if(confirm("¿Eliminar usuario?")) db.collection('users').doc(uid).delete(); }
