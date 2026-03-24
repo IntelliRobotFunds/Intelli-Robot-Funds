@@ -93,10 +93,14 @@
 
 <div id="withdrawalModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
   <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-md border border-red-500/30">
-    <h3 class="text-xl font-bold mb-4 text-center">Solicitar Retiro</h3>
-    <input id="withdrawAmount" type="number" placeholder="0.00" class="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-2xl font-bold outline-none">
-    <button onclick="confirmWithdrawal()" class="w-full bg-red-600 py-4 rounded-xl font-bold mt-4">Confirmar Retiro</button>
-    <button onclick="document.getElementById('withdrawalModal').classList.add('hidden')" class="w-full mt-2 text-zinc-500 text-sm text-center">Cancelar</button>
+    <h3 class="text-xl font-bold mb-4 text-center text-red-400">Solicitar Retiro</h3>
+    <p class="text-xs text-zinc-500 mb-4 text-center">Ingresa el monto en USD que deseas retirar</p>
+    <div class="relative mb-6">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
+      <input id="withdrawAmount" type="number" placeholder="0.00" class="w-full p-4 pl-8 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-2xl font-bold outline-none">
+    </div>
+    <button onclick="confirmWithdrawal()" class="w-full bg-red-600 hover:bg-red-700 py-4 rounded-xl font-bold">Confirmar Retiro</button>
+    <button onclick="hideWithdrawalModal()" class="w-full mt-4 text-zinc-500 text-sm text-center">Cancelar</button>
   </div>
 </div>
 
@@ -132,8 +136,8 @@
       </div>
     </div>
     <div class="flex flex-col sm:flex-row gap-6 mb-16">
-      <button onclick="startInvestment()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition">Invertir Ahora</button>
-      <button onclick="requestWithdrawal()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-6 rounded-3xl text-2xl font-bold transition border border-zinc-700">Solicitar Retiro</button>
+      <button onclick="startInvestment()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition transform hover:scale-[1.01]">Invertir Ahora</button>
+      <button onclick="showWithdrawalModal()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-6 rounded-3xl text-2xl font-bold transition border border-zinc-700 transform hover:scale-[1.01]">Solicitar Retiro</button>
     </div>
   </div>
 
@@ -188,12 +192,15 @@ const wallets = {
   usdt: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
 };
 
-// --- AUTH ---
+// --- MODALES ---
 function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
 function hideLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
 function showRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
 function hideRegisterModal() { document.getElementById('registerModal').classList.add('hidden'); }
+function showWithdrawalModal() { document.getElementById('withdrawalModal').classList.remove('hidden'); }
+function hideWithdrawalModal() { document.getElementById('withdrawalModal').classList.add('hidden'); }
 
+// --- AUTH ---
 async function doRegister() {
   const e = document.getElementById('regEmail').value.trim();
   const p = document.getElementById('regPass').value;
@@ -219,7 +226,7 @@ function doLogin() {
 
 function logout() { auth.signOut().then(() => location.reload()); }
 
-// --- INVESTMENT ---
+// --- LOGICA DE INVERSION (DEPÓSITOS) ---
 function startInvestment() { document.getElementById('step1Modal').classList.remove('hidden'); }
 function showStep2() {
   document.getElementById('step1Modal').classList.add('hidden');
@@ -236,12 +243,12 @@ async function confirmDeposit() {
   const amtInput = document.getElementById('depositAmount');
   const coin = document.getElementById('coinSelect').value.toUpperCase();
   const amt = parseFloat(amtInput.value);
-  if(!amt || amt <= 0) return alert(`Ingresa el monto`);
+  if(!amt || amt <= 0) return alert(`Ingresa un monto válido`);
 
   try {
     const newRequest = {
-      // ID Único real combinando tiempo y un número aleatorio para evitar borrado masivo
-      id: "REQ-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      // ID Único para evitar borrado masivo
+      id: "REQ-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9),
       type: 'DEPÓSITO',
       amount: amt,
       currency: coin,
@@ -256,16 +263,19 @@ async function confirmDeposit() {
   } catch(err) { alert(err.message); }
 }
 
+// --- LOGICA DE RETIROS ---
 async function confirmWithdrawal() {
   const amtInput = document.getElementById('withdrawAmount');
   const amt = parseFloat(amtInput.value);
-  if(!amt || amt <= 0) return alert("Monto inválido");
+  if(!amt || amt <= 0) return alert("Ingresa un monto válido");
+  
   try {
     const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
-    if (amt > (userDoc.data().capital || 0)) return alert("Fondos insuficientes");
+    const currentCap = userDoc.data().capital || 0;
+    if (amt > currentCap) return alert("No tienes capital suficiente para este retiro.");
 
     const newRequest = {
-      id: "REQ-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+      id: "REQ-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9),
       type: 'RETIRO',
       amount: amt,
       currency: 'USD',
@@ -274,20 +284,22 @@ async function confirmWithdrawal() {
     await db.collection('users').doc(auth.currentUser.uid).update({ 
       pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest)
     });
-    document.getElementById('withdrawalModal').classList.add('hidden');
+    hideWithdrawalModal();
     amtInput.value = "";
-    alert("Solicitud enviada");
+    alert("Solicitud de retiro enviada correctamente.");
   } catch(err) { alert(err.message); }
 }
 
 function closeInvestmentFlow() { 
-  document.querySelectorAll('[id^="step"]').forEach(m => m.classList.add('hidden')); 
+  document.getElementById('step1Modal').classList.add('hidden');
+  document.getElementById('step2Modal').classList.add('hidden');
+  document.getElementById('step3Modal').classList.add('hidden');
 }
 
-// --- ADMIN LOGIC ---
+// --- PANEL ADMIN ---
 async function processDailyClosure() {
   const percent = parseFloat(document.getElementById('dailyPercent').value);
-  if (isNaN(percent) || percent <= 0) return alert("Ingresa porcentaje");
+  if (isNaN(percent) || percent <= 0) return alert("Ingresa un porcentaje");
   try {
     const snapshot = await db.collection('users').get();
     const batch = db.batch();
@@ -298,7 +310,7 @@ async function processDailyClosure() {
       }
     });
     await batch.commit();
-    alert("Cierre completado");
+    alert("Cierre global procesado.");
     document.getElementById('dailyPercent').value = "";
   } catch (err) { alert(err.message); }
 }
@@ -317,9 +329,9 @@ function loadUsers() {
           const color = req.type === 'RETIRO' ? 'bg-red-600' : 'bg-emerald-600';
           requestsHTML += `
             <div class="flex items-center gap-2 mb-2 bg-zinc-800 p-2 rounded border border-zinc-700">
-              <span class="text-[9px] ${color} text-white px-1 rounded font-bold">${req.type}</span>
-              <span class="text-xs flex-1 text-zinc-300">${req.amount} ${req.currency}</span>
-              <button onclick="deleteSingleRequest('${doc.id}', '${req.id}')" class="text-zinc-500 hover:text-white px-2 font-bold">✕</button>
+              <span class="text-[9px] ${color} text-white px-2 py-0.5 rounded font-bold">${req.type}</span>
+              <span class="text-xs flex-1 text-zinc-300 font-mono">${req.amount} ${req.currency}</span>
+              <button onclick="deleteSingleRequest('${doc.id}', '${req.id}')" class="text-zinc-500 hover:text-white px-2 font-bold transition">✕</button>
             </div>`;
         });
       }
@@ -328,15 +340,15 @@ function loadUsers() {
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/10 transition';
       tr.innerHTML = `
         <td class="py-6 px-4">
-          <div class="font-bold text-zinc-200">${data.email}</div>
+          <div class="font-bold text-zinc-200 text-sm">${data.email}</div>
           <div class="mt-2 w-full max-w-xs">${requestsHTML || '<span class="text-zinc-600 text-xs italic">Sin avisos</span>'}</div>
         </td>
         <td class="py-6 px-4">
-          <input type="number" id="cap-${doc.id}" value="${(data.capital || 0).toFixed(2)}" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 w-28 text-emerald-400 outline-none">
+          <input type="number" id="cap-${doc.id}" value="${(data.capital || 0).toFixed(2)}" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 w-28 text-emerald-400 font-bold outline-none">
         </td>
         <td class="py-6 px-4 text-right">
-          <button onclick="saveCapital('${doc.id}')" class="bg-emerald-600 text-white px-3 py-1 rounded text-sm font-bold">Guardar</button>
-          <button onclick="deleteUser('${doc.id}')" class="ml-4 text-red-900 hover:text-red-500 text-xs">Borrar</button>
+          <button onclick="saveCapital('${doc.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1 rounded text-sm font-bold transition">Guardar</button>
+          <button onclick="deleteUser('${doc.id}')" class="ml-4 text-red-900 hover:text-red-500 text-xs transition">Borrar Usuario</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -345,15 +357,12 @@ function loadUsers() {
 }
 
 async function deleteSingleRequest(uid, requestId) {
-  if(!confirm("¿Borrar aviso?")) return;
+  if(!confirm("¿Deseas eliminar esta notificación?")) return;
   try {
     const userRef = db.collection('users').doc(uid);
     const docSnapshot = await userRef.get();
     const currentRequests = docSnapshot.data().pendingRequests || [];
-    
-    // Filtrado estricto por el ID único que creamos
     const updatedRequests = currentRequests.filter(r => r.id !== requestId);
-    
     await userRef.update({ pendingRequests: updatedRequests });
   } catch(err) { alert(err.message); }
 }
@@ -361,12 +370,12 @@ async function deleteSingleRequest(uid, requestId) {
 async function saveCapital(uid) {
   const val = parseFloat(document.getElementById(`cap-${uid}`).value);
   await db.collection('users').doc(uid).update({ capital: val });
-  alert("Capital actualizado");
+  alert("Capital actualizado con éxito.");
 }
 
-function deleteUser(uid) { if(confirm("¿Eliminar usuario?")) db.collection('users').doc(uid).delete(); }
+function deleteUser(uid) { if(confirm("¿Eliminar usuario permanentemente?")) db.collection('users').doc(uid).delete(); }
 
-// --- OBSERVER ---
+// --- OBSERVER DE ESTADO ---
 auth.onAuthStateChanged(user => {
   if (user && user.emailVerified) {
     document.getElementById('authButtons').classList.add('hidden');
