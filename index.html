@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IntelliRobot Funds - Admin Panel</title>
+  <title>IntelliRobot Funds - Panel</title>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
@@ -95,6 +94,7 @@
         <div id="gananciaDia" class="text-5xl font-bold text-emerald-400">0.00</div>
       </div>
     </div>
+
     <div class="bg-zinc-900 p-8 rounded-3xl mb-12 border border-zinc-800">
       <h3 class="text-xl mb-6 font-bold">Instrucciones de Inversión</h3>
       <p class="text-zinc-400 mb-6">Envía tus fondos a las siguientes direcciones. Una vez recibido, el administrador actualizará tu capital en un plazo de 24hs.</p>
@@ -102,6 +102,11 @@
         <div class="bg-zinc-800 p-4 rounded-xl font-mono text-sm break-all">BTC: bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh</div>
         <div class="bg-zinc-800 p-4 rounded-xl font-mono text-sm break-all">ETH: 0x742d35Cc6634C0532925a3b844Bc454e4438f44e</div>
       </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-6 mb-16">
+      <button onclick="alert('Envía fondos a las direcciones de arriba. El administrador actualizará tu capital tras confirmar la transacción.')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 py-6 rounded-3xl text-2xl font-bold transition-all transform hover:scale-105">Invertir Ahora</button>
+      <button onclick="alert('Solicitud de retiro enviada. El administrador se pondrá en contacto contigo para procesar el pago.')" class="flex-1 bg-zinc-800 hover:bg-zinc-700 py-6 rounded-3xl text-2xl font-bold transition-all border border-zinc-700 transform hover:scale-105">Solicitar Retiro</button>
     </div>
   </div>
 
@@ -123,7 +128,6 @@
 </div>
 
 <script>
-// --- CONFIGURACIÓN ---
 const firebaseConfig = {
   apiKey: "AIzaSyDYQUengy7vyNWX_JgaE-wibB5mBnboXxc",
   authDomain: "intellirobotfunds.firebaseapp.com",
@@ -138,47 +142,25 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const ADMIN_EMAIL = "mora87466@gmail.com";
 
-// --- UI HELPERS ---
 function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
 function hideLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
 function showRegisterModal() { document.getElementById('registerModal').classList.remove('hidden'); }
 function hideRegisterModal() { document.getElementById('registerModal').classList.add('hidden'); }
 
-// --- AUTH ---
-// --- REGISTRO ACTUALIZADO (Pégalo aquí) ---
 async function doRegister() {
   const email = document.getElementById('regEmail').value.trim();
   const pass = document.getElementById('regPass').value;
-  
   if (!email || !pass) return alert("Completa los datos");
-
   try {
-    // 1. Creamos el usuario en Authentication
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
-    
-    // 2. CREAMOS EL DOCUMENTO EN FIRESTORE (Esto es lo que te faltaba asegurar)
-    // Usamos await para que el programa espere a que la base de datos se actualice
     await db.collection('users').doc(cred.user.uid).set({
-      email: email,
-      capital: 0,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      email: email, capital: 0, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    
-    // 3. Enviamos el correo de verificación
-    await cred.user.sendEmailVerification({ 
-      url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' 
-    });
-    
-    alert("Cuenta creada con éxito. Por favor, verifica tu bandeja de entrada (y spam) para activar tu cuenta.");
-    
-    // Cerramos sesión para que no entre al dashboard sin estar verificado
+    await cred.user.sendEmailVerification({ url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' });
+    alert("Cuenta creada. Verifica tu email.");
     await auth.signOut();
     hideRegisterModal();
-    
-  } catch (err) {
-    // Si hay un error (ej: email ya usado), lo mostramos aquí
-    alert("Error al registrar: " + err.message);
-  }
+  } catch (err) { alert("Error: " + err.message); }
 }
 
 function doLogin() {
@@ -194,27 +176,22 @@ function doLogin() {
 
 function logout() { auth.signOut().then(() => location.reload()); }
 
-// --- OBSERVADOR (LÓGICA PRINCIPAL) ---
 auth.onAuthStateChanged(user => {
   if (user && user.emailVerified) {
-    // UI General al estar logeado
     document.getElementById('authButtons').classList.add('hidden');
     document.getElementById('heroSection').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
     document.getElementById('userEmailDisplay').textContent = user.email;
 
     if (user.email === ADMIN_EMAIL) {
-      // LOGICA ADMIN
       document.getElementById('userRole').textContent = "Administrador del Sistema";
       document.getElementById('adminPanel').classList.remove('hidden');
-      document.getElementById('userStats').classList.add('hidden'); // OCULTA CAPITAL/GANANCIAS
+      document.getElementById('userStats').classList.add('hidden');
       loadUsers();
     } else {
-      // LOGICA USUARIO
       document.getElementById('userRole').textContent = "Usuario Verificado";
       document.getElementById('adminPanel').classList.add('hidden');
-      document.getElementById('userStats').classList.remove('hidden'); // MUESTRA CAPITAL/GANANCIAS
-      
+      document.getElementById('userStats').classList.remove('hidden');
       db.collection('users').doc(user.uid).onSnapshot(doc => {
         if (doc.exists) {
           const cap = doc.data().capital || 0;
@@ -225,31 +202,19 @@ auth.onAuthStateChanged(user => {
       });
     }
   } else {
-    // UI al estar deslogeado
     document.getElementById('authButtons').classList.remove('hidden');
     document.getElementById('heroSection').classList.remove('hidden');
     document.getElementById('dashboard').classList.add('hidden');
   }
 });
 
-// --- FUNCIONES ADMIN ---
 function loadUsers() {
   const tbody = document.getElementById('usersBody');
-  
-  // Usamos onSnapshot para que la lista se actualice sola en tiempo real
   db.collection('users').onSnapshot(snap => {
-    tbody.innerHTML = ''; // Limpiamos la tabla para recargarla
-    
-    if (snap.empty) {
-      tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-zinc-500">No hay usuarios registrados</td></tr>';
-      return;
-    }
-
+    tbody.innerHTML = '';
     snap.forEach(doc => {
       const data = doc.data();
-      // No te muestres a ti mismo en la lista de gestión de inversión
       if (data.email === ADMIN_EMAIL) return; 
-
       const tr = document.createElement('tr');
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/50 transition';
       tr.innerHTML = `
@@ -265,24 +230,20 @@ function loadUsers() {
       `;
       tbody.appendChild(tr);
     });
-  }, err => {
-    console.error("Error al leer Firestore: ", err);
-    tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-red-500">Error de permisos: Revisa las Reglas de Firestore en Firebase Console.</td></tr>`;
   });
 }
 
 function updateCapital(uid) {
   const newCap = parseFloat(document.getElementById(`cap-${uid}`).value);
-  if (isNaN(newCap)) return alert("Ingresa un número válido");
-  
+  if (isNaN(newCap)) return alert("Número inválido");
   db.collection('users').doc(uid).update({ capital: newCap })
-    .then(() => alert("Capital actualizado con éxito"))
+    .then(() => alert("Capital actualizado"))
     .catch(err => alert("Error: " + err.message));
 }
 
 function deleteUser(uid) {
-  if (confirm("¿Estás seguro de eliminar este usuario? Esta acción es irreversible.")) {
-    db.collection('users').doc(uid).delete().then(() => loadUsers());
+  if (confirm("¿Eliminar usuario?")) {
+    db.collection('users').doc(uid).delete();
   }
 }
 </script>
