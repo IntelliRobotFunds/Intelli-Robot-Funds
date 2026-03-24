@@ -221,7 +221,12 @@ async function doRegister() {
   if(!e || !p) return alert("Completa los campos");
   try {
     const cred = await auth.createUserWithEmailAndPassword(e, p);
-    await db.collection('users').doc(cred.user.uid).set({ email: e, capital: 0, pending: false, pendingType: '', pendingAmount: 0, pendingCurrency: '' });
+    // Cambiamos los campos fijos por un array 'pendingRequests'
+    await db.collection('users').doc(cred.user.uid).set({ 
+      email: e, 
+      capital: 0, 
+      pendingRequests: [] 
+    });
     await cred.user.sendEmailVerification({ url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' });
     alert("Cuenta creada. Revisa tu email.");
     await auth.signOut();
@@ -260,23 +265,26 @@ async function confirmDeposit() {
   const coin = document.getElementById('coinSelect').value.toUpperCase();
   const amt = parseFloat(amtInput.value);
   
-  if(!amt || amt <= 0) return alert(`Por favor, ingresa el monto en ${coin} que vas a enviar.`);
+  if(!amt || amt <= 0) return alert(`Ingresa el monto en ${coin}`);
 
   try {
+    const newRequest = {
+      type: 'DEPÓSITO',
+      amount: amt,
+      currency: coin,
+      date: new Date().toLocaleString()
+    };
+
     await db.collection('users').doc(auth.currentUser.uid).update({ 
-      pending: true, 
-      pendingType: 'DEPÓSITO', 
-      pendingAmount: amt,
-      pendingCurrency: coin
+      pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest)
     });
+
     amtInput.value = "";
     document.getElementById('step2Modal').classList.add('hidden');
     document.getElementById('step3Modal').classList.remove('hidden');
   } catch(err) { alert(err.message); }
 }
 
-// --- WITHDRAWAL FLOW ---
-function requestWithdrawal() { document.getElementById('withdrawalModal').classList.remove('hidden'); }
 async function confirmWithdrawal() {
   const amtInput = document.getElementById('withdrawAmount');
   const amt = parseFloat(amtInput.value);
@@ -285,20 +293,24 @@ async function confirmWithdrawal() {
   try {
     const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
     const cap = userDoc.data().capital || 0;
-    if (amt > cap) return alert(`Fondos insuficientes. Capital actual: $${cap}`);
+    if (amt > cap) return alert(`Fondos insuficientes.`);
+
+    const newRequest = {
+      type: 'RETIRO',
+      amount: amt,
+      currency: 'USD',
+      date: new Date().toLocaleString()
+    };
 
     await db.collection('users').doc(auth.currentUser.uid).update({ 
-      pending: true, 
-      pendingType: 'RETIRO', 
-      pendingAmount: amt,
-      pendingCurrency: 'USD'
+      pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest)
     });
+
     document.getElementById('withdrawalModal').classList.add('hidden');
     amtInput.value = "";
-    alert("Solicitud enviada.");
+    alert("Solicitud de retiro enviada.");
   } catch(err) { alert(err.message); }
 }
-
 function closeInvestmentFlow() { document.querySelectorAll('[id^="step"]').forEach(m => m.classList.add('hidden')); }
 
 // --- CIERRE DIARIO (ADMIN) ---
@@ -372,23 +384,34 @@ function loadUsers() {
     snap.forEach(doc => {
       const data = doc.data();
       if(data.email === ADMIN_EMAIL) return;
+      
       const tr = document.createElement('tr');
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/30 transition';
       
-      const badgeClass = data.pendingType === 'RETIRO' ? 'bg-red-500' : 'bg-emerald-500';
-      const coin = data.pendingCurrency || '';
-      const amountText = `: ${data.pendingAmount || 0} ${coin}`;
+      // Generamos un bloque de texto por cada solicitud pendiente
+      let requestsHTML = '';
+      if (data.pendingRequests && data.pendingRequests.length > 0) {
+        data.pendingRequests.forEach(req => {
+          const color = req.type === 'RETIRO' ? 'bg-red-500' : 'bg-emerald-500';
+          requestsHTML += `
+            <div class="mb-1">
+              <span class="text-[9px] ${color} text-black px-2 py-0.5 rounded font-black uppercase">
+                ${req.type}: ${req.amount} ${req.currency} (${req.date})
+              </span>
+            </div>`;
+        });
+      }
       
       tr.innerHTML = `
         <td class="py-6 px-4">
           <div class="font-bold">${data.email}</div>
-          ${data.pending ? `<span class="text-[10px] ${badgeClass} text-black px-2 py-0.5 rounded font-black animate-pulse uppercase">${data.pendingType}${amountText}</span>` : ''}
+          <div class="mt-2">${requestsHTML}</div>
         </td>
         <td class="py-6 px-4">
-          <input type="number" id="cap-${doc.id}" value="${(data.capital || 0).toFixed(2)}" class="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 w-32 text-emerald-400 focus:border-emerald-500 outline-none">
+          <input type="number" id="cap-${doc.id}" value="${(data.capital || 0).toFixed(2)}" class="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 w-32 text-emerald-400 outline-none">
         </td>
         <td class="py-6 px-4 text-right">
-          <button onclick="saveCapital('${doc.id}')" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-bold mr-2 transition hover:bg-emerald-500">Guardar</button>
+          <button onclick="saveCapital('${doc.id}')" class="bg-emerald-600 px-4 py-2 rounded-lg text-sm font-bold mr-2 transition hover:bg-emerald-500">Guardar y Limpiar Avisos</button>
           <button onclick="deleteUser('${doc.id}')" class="text-red-500 hover:bg-red-500/10 p-2 rounded-lg">Borrar</button>
         </td>
       `;
@@ -399,14 +422,12 @@ function loadUsers() {
 
 async function saveCapital(uid) {
   const val = parseFloat(document.getElementById(`cap-${uid}`).value);
+  // Al guardar el nuevo capital, vaciamos la lista de solicitudes pendientes
   await db.collection('users').doc(uid).update({ 
     capital: val, 
-    pending: false, 
-    pendingType: '', 
-    pendingAmount: 0,
-    pendingCurrency: ''
+    pendingRequests: [] 
   });
-  alert("Actualizado.");
+  alert("Capital actualizado y avisos limpiados.");
 }
 
 function deleteUser(uid) { if(confirm("¿Eliminar usuario?")) db.collection('users').doc(uid).delete(); }
