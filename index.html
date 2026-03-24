@@ -69,18 +69,25 @@
 
 <div id="step2Modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
   <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-lg border border-zinc-700">
-    <h3 class="text-xl font-bold mb-6 text-center text-emerald-400">Seleccionar Moneda</h3>
-    <p class="text-xs text-orange-400 mb-4 font-bold text-center uppercase">Red: BSC (BEP20) Únicamente</p>
+    <h3 class="text-xl font-bold mb-6 text-center text-emerald-400">Datos del Depósito</h3>
     
+    <label class="text-xs text-zinc-500 uppercase font-bold mb-2 block">Monto que vas a enviar (USD)</label>
+    <div class="relative mb-6">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
+      <input id="depositAmount" type="number" placeholder="0.00" class="w-full p-4 pl-8 bg-zinc-800 border border-zinc-700 rounded-xl text-white text-xl font-bold outline-none focus:border-emerald-500">
+    </div>
+
+    <label class="text-xs text-zinc-500 uppercase font-bold mb-2 block">Selecciona la Moneda</label>
     <select id="coinSelect" onchange="updateAddressDisplay()" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none focus:border-emerald-500">
       <option value="btc">Bitcoin (BTC)</option>
       <option value="eth">Ethereum (ETH)</option>
       <option value="usdt">USDT (Tether)</option>
     </select>
 
-    <div class="bg-black p-4 rounded-xl mb-8 border border-zinc-800">
-      <p class="text-xs text-zinc-500 mb-2 uppercase tracking-widest">Dirección de envío:</p>
-      <p id="addressDisplay" class="font-mono text-sm break-all text-emerald-300">bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh</p>
+    <div class="bg-black p-4 rounded-xl mb-4 border border-zinc-800">
+      <p class="text-xs text-zinc-500 mb-2 uppercase tracking-widest text-center">Red: BSC (BEP20) Únicamente</p>
+      <p class="text-[10px] text-zinc-600 mb-1 uppercase text-center">Dirección de envío:</p>
+      <p id="addressDisplay" class="font-mono text-sm break-all text-emerald-300 text-center">bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh</p>
     </div>
 
     <button onclick="confirmDeposit()" class="w-full bg-emerald-600 py-4 rounded-xl font-bold">Ya realicé el depósito</button>
@@ -244,8 +251,18 @@ function updateAddressDisplay() {
   document.getElementById('addressDisplay').textContent = wallets[coin];
 }
 async function confirmDeposit() {
+  const amtInput = document.getElementById('depositAmount');
+  const amt = parseFloat(amtInput.value);
+  
+  if(!amt || amt <= 0) return alert("Por favor, ingresa el monto que vas a depositar.");
+
   try {
-    await db.collection('users').doc(auth.currentUser.uid).update({ pending: true, pendingType: 'DEPÓSITO', pendingAmount: 0 });
+    await db.collection('users').doc(auth.currentUser.uid).update({ 
+      pending: true, 
+      pendingType: 'DEPÓSITO', 
+      pendingAmount: amt 
+    });
+    amtInput.value = "";
     document.getElementById('step2Modal').classList.add('hidden');
     document.getElementById('step3Modal').classList.remove('hidden');
   } catch(err) { alert(err.message); }
@@ -282,7 +299,7 @@ async function processDailyClosure() {
   const usersRef = db.collection('users');
   try {
     const snapshot = await usersRef.get();
-    const batch = db.batch(); // Usamos batch para procesar todo junto
+    const batch = db.batch();
 
     snapshot.forEach(doc => {
       const data = doc.data();
@@ -295,10 +312,10 @@ async function processDailyClosure() {
     });
 
     await batch.commit();
-    alert("¡Cierre completado con éxito! Todos los capitales han sido actualizados.");
+    alert("¡Cierre completado!");
     document.getElementById('dailyPercent').value = "";
   } catch (err) {
-    alert("Error procesando cierre: " + err.message);
+    alert("Error: " + err.message);
   }
 }
 
@@ -346,7 +363,7 @@ function loadUsers() {
       const tr = document.createElement('tr');
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/30 transition';
       const badgeClass = data.pendingType === 'RETIRO' ? 'bg-red-500' : 'bg-emerald-500';
-      const amountText = data.pendingType === 'RETIRO' ? `: $${data.pendingAmount}` : '';
+      const amountText = `: $${data.pendingAmount || 0}`;
       tr.innerHTML = `
         <td class="py-6 px-4">
           <div class="font-bold">${data.email}</div>
