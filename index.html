@@ -145,18 +145,40 @@ function showRegisterModal() { document.getElementById('registerModal').classLis
 function hideRegisterModal() { document.getElementById('registerModal').classList.add('hidden'); }
 
 // --- AUTH ---
-function doRegister() {
+// --- REGISTRO ACTUALIZADO (Pégalo aquí) ---
+async function doRegister() {
   const email = document.getElementById('regEmail').value.trim();
   const pass = document.getElementById('regPass').value;
+  
   if (!email || !pass) return alert("Completa los datos");
 
-  auth.createUserWithEmailAndPassword(email, pass)
-    .then(cred => {
-      db.collection('users').doc(cred.user.uid).set({ email, capital: 0 });
-      return cred.user.sendEmailVerification({ url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' });
-    })
-    .then(() => { alert("Verifica tu email antes de entrar."); auth.signOut(); hideRegisterModal(); })
-    .catch(err => alert(err.message));
+  try {
+    // 1. Creamos el usuario en Authentication
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    
+    // 2. CREAMOS EL DOCUMENTO EN FIRESTORE (Esto es lo que te faltaba asegurar)
+    // Usamos await para que el programa espere a que la base de datos se actualice
+    await db.collection('users').doc(cred.user.uid).set({
+      email: email,
+      capital: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    
+    // 3. Enviamos el correo de verificación
+    await cred.user.sendEmailVerification({ 
+      url: 'https://intellirobotfunds.github.io/Intelli-Robot-Funds/' 
+    });
+    
+    alert("Cuenta creada con éxito. Por favor, verifica tu bandeja de entrada (y spam) para activar tu cuenta.");
+    
+    // Cerramos sesión para que no entre al dashboard sin estar verificado
+    await auth.signOut();
+    hideRegisterModal();
+    
+  } catch (err) {
+    // Si hay un error (ej: email ya usado), lo mostramos aquí
+    alert("Error al registrar: " + err.message);
+  }
 }
 
 function doLogin() {
