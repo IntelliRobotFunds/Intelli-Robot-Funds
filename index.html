@@ -193,7 +193,7 @@
 </div>
 
 <script>
-// CONFIGURACIÓN FIREBASE (Tus datos originales)
+// CONFIGURACIÓN FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDYQUengy7vyNWX_JgaE-wibB5mBnboXxc",
   authDomain: "intellirobotfunds.firebaseapp.com",
@@ -209,7 +209,7 @@ const db = firebase.firestore();
 const ADMIN_EMAIL = "mora87466@gmail.com";
 const wallets = { btc: "bc1qxy2kgdlgjrsqtzq2n0yrf2493p83kkfjhx0wlh", eth: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e", usdt: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e" };
 
-let globalAPY = 18.5; // Valor por defecto
+let globalAPY = 18.5; 
 
 // MODALES UI
 function showLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
@@ -245,7 +245,7 @@ function doLogin() {
 
 function logout() { auth.signOut().then(() => location.reload()); }
 
-// DEPÓSITOS Y RETIROS (Tus funciones originales)
+// DEPÓSITOS Y RETIROS
 function startInvestment() { document.getElementById('step1Modal').classList.remove('hidden'); }
 function showStep2() { document.getElementById('step1Modal').classList.add('hidden'); document.getElementById('step2Modal').classList.remove('hidden'); updateAddressDisplay(); }
 function updateAddressDisplay() { const coin = document.getElementById('coinSelect').value; document.getElementById('addressDisplay').textContent = wallets[coin]; document.getElementById('coinSuffix').textContent = coin.toUpperCase(); }
@@ -277,17 +277,17 @@ async function confirmWithdrawal() {
   } catch(err) { alert(err.message); }
 }
 
-// --- LOGICA ADMIN APR ---
+// LOGICA ADMIN APR
 async function updateGlobalAPY() {
     const val = parseFloat(document.getElementById('apyInput').value);
     if(isNaN(val)) return alert("Ingresa un número");
     try {
         await db.collection('settings').doc('yield').set({ apy: val });
         alert("APR actualizado correctamente");
-    } catch(e) { alert("Error de permisos en Firestore"); }
+    } catch(e) { alert("Error de permisos"); }
 }
 
-// PROCESAR CIERRE (Original)
+// PROCESAR CIERRE
 async function processDailyClosure() {
   const percent = parseFloat(document.getElementById('dailyPercent').value);
   if (isNaN(percent) || percent <= 0) return alert("Porcentaje inválido");
@@ -307,33 +307,52 @@ async function processDailyClosure() {
   } catch (err) { alert(err.message); }
 }
 
-// CARGAR USUARIOS (Original)
+// CARGAR USUARIOS (Corregido con leyendas y eliminar)
 function loadUsers() {
   const tbody = document.getElementById('usersBody');
   db.collection('users').onSnapshot(snap => {
     tbody.innerHTML = '';
     snap.forEach(doc => {
-      const data = doc.data(); if(data.email === ADMIN_EMAIL) return;
+      const data = doc.data(); 
+      if(data.email === ADMIN_EMAIL) return;
+      
       let reqsHTML = '';
       (data.pendingRequests || []).forEach(req => {
-        reqsHTML += `<div class="flex items-center gap-2 mb-1 bg-zinc-800 p-1 rounded border border-zinc-700">
-          <span class="text-[8px] font-bold uppercase">${req.type}</span>
+        const c = req.type === 'RETIRO' ? 'bg-red-600' : 'bg-emerald-600';
+        reqsHTML += `<div class="flex items-center gap-2 mb-1 bg-zinc-800 p-1.5 rounded border border-zinc-700">
+          <span class="text-[8px] ${c} px-1 rounded font-bold">${req.type}</span>
           <span class="text-[10px] flex-1 font-mono">${req.amount} ${req.currency}</span>
           <button onclick="deleteSingleRequest('${doc.id}', '${req.id}')">✕</button>
         </div>`;
       });
+
       const tr = document.createElement('tr');
-      tr.className = 'border-b border-zinc-800';
+      tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/20 transition';
       tr.innerHTML = `
-        <td class="py-6 px-4"><div class="font-bold text-sm">${data.email}</div><div class="mt-2 w-full max-w-[180px]">${reqsHTML || '---'}</div></td>
         <td class="py-6 px-4">
-          <div class="flex flex-col gap-1">
-            <input type="number" id="capBTC-${doc.id}" value="${data.capBTC||0}" class="bg-black border border-zinc-800 text-xs p-1 w-24">
-            <input type="number" id="capETH-${doc.id}" value="${data.capETH||0}" class="bg-black border border-zinc-800 text-xs p-1 w-24">
-            <input type="number" id="capUSDT-${doc.id}" value="${data.capUSDT||0}" class="bg-black border border-zinc-800 text-xs p-1 w-24">
+          <div class="font-bold text-zinc-200 text-sm">${data.email}</div>
+          <div class="mt-2 w-full max-w-[180px]">${reqsHTML || '<span class="text-zinc-600 text-[10px]">Sin avisos</span>'}</div>
+        </td>
+        <td class="py-6 px-4">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-orange-500 font-bold w-8">BTC</span>
+                <input type="number" step="any" id="capBTC-${doc.id}" value="${data.capBTC||0}" class="bg-black border border-zinc-800 rounded px-2 py-1 text-xs w-32 outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-blue-400 font-bold w-8">ETH</span>
+                <input type="number" step="any" id="capETH-${doc.id}" value="${data.capETH||0}" class="bg-black border border-zinc-800 rounded px-2 py-1 text-xs w-32 outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] text-emerald-500 font-bold w-8">USDT</span>
+                <input type="number" step="any" id="capUSDT-${doc.id}" value="${data.capUSDT||0}" class="bg-black border border-zinc-800 rounded px-2 py-1 text-xs w-32 outline-none">
+            </div>
           </div>
         </td>
-        <td class="py-6 px-4 text-right"><button onclick="saveAllCapitals('${doc.id}')" class="bg-emerald-600 px-3 py-1 rounded text-[10px] font-bold">GUARDAR</button></td>`;
+        <td class="py-6 px-4 text-right">
+          <button onclick="saveAllCapitals('${doc.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase transition">Guardar</button>
+          <button onclick="deleteUser('${doc.id}')" class="block mt-4 ml-auto text-[10px] text-zinc-600 hover:text-red-500">Eliminar</button>
+        </td>`;
       tbody.appendChild(tr);
     });
   });
@@ -344,7 +363,7 @@ async function saveAllCapitals(uid) {
     const eth = parseFloat(document.getElementById(`capETH-${uid}`).value) || 0;
     const usdt = parseFloat(document.getElementById(`capUSDT-${uid}`).value) || 0;
     await db.collection('users').doc(uid).update({ capBTC: btc, capETH: eth, capUSDT: usdt });
-    alert("Guardado.");
+    alert("Balances actualizados.");
 }
 
 async function deleteSingleRequest(uid, requestId) {
@@ -354,7 +373,9 @@ async function deleteSingleRequest(uid, requestId) {
   await userRef.update({ pendingRequests: filtered });
 }
 
-// --- OBSERVER PRINCIPAL ---
+function deleteUser(uid) { if(confirm("¿Borrar usuario definitivamente?")) db.collection('users').doc(uid).delete(); }
+
+// OBSERVER PRINCIPAL
 auth.onAuthStateChanged(user => {
   if (user && user.emailVerified) {
     document.getElementById('authButtons').classList.add('hidden');
@@ -362,7 +383,6 @@ auth.onAuthStateChanged(user => {
     document.getElementById('dashboard').classList.remove('hidden');
     document.getElementById('userEmailDisplay').textContent = user.email;
 
-    // Escuchar cambios en el APR dinámico
     db.collection('settings').doc('yield').onSnapshot(s => {
         if(s.exists) {
             globalAPY = s.data().apy;
@@ -385,13 +405,10 @@ auth.onAuthStateChanged(user => {
         if(doc.exists) {
           const d = doc.data();
           const dailyFactor = (globalAPY / 100) / 365;
-
           document.getElementById('capBTC').textContent = (d.capBTC || 0).toFixed(6);
           document.getElementById('profitBTC').textContent = "+" + ((d.capBTC || 0) * dailyFactor).toFixed(6);
-          
           document.getElementById('capETH').textContent = (d.capETH || 0).toFixed(6);
           document.getElementById('profitETH').textContent = "+" + ((d.capETH || 0) * dailyFactor).toFixed(6);
-          
           document.getElementById('capUSDT').textContent = (d.capUSDT || 0).toFixed(2);
           document.getElementById('profitUSDT').textContent = "+" + ((d.capUSDT || 0) * dailyFactor).toFixed(2);
         }
