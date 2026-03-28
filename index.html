@@ -266,7 +266,7 @@ async function confirmDeposit() {
   try {
     const newRequest = { id: "REQ-" + Date.now(), type: 'DEPÓSITO', amount: amt, currency: coin, date: new Date().toLocaleString() };
     await db.collection('users').doc(auth.currentUser.uid).update({ pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest) });
-    amtInput.value = ""; closeInvestmentFlow(); alert("Notificación enviada.");
+    amtInput.value = ""; closeInvestmentFlow(); alert("Notificación enviada, puede tardar hasta 24 Hs. la acreditacion.");
   } catch(err) { alert(err.message); }
 }
 
@@ -301,7 +301,7 @@ async function confirmWithdrawal() {
     document.getElementById('withdrawAmount').value = "";
     document.getElementById('withdrawAddress').value = "";
     hideWithdrawalModal(); 
-    alert("Solicitud enviada correctamente.");
+    alert("Solicitud enviada correctamente, puede tardar hasta 24 Hs..");
   } catch(err) { 
     alert("Error: " + err.message); 
   }
