@@ -271,14 +271,37 @@ async function confirmWithdrawal() {
   const coin = document.getElementById('withdrawCoinSelect').value;
   const field = "cap" + coin.toUpperCase();
   const amt = parseFloat(document.getElementById('withdrawAmount').value);
+  const address = document.getElementById('withdrawAddress').value.trim(); // Captura la dirección
+
+  // Validaciones
   if(!amt || amt <= 0) return alert("Monto inválido");
+  if(!address) return alert("Por favor, ingresa la dirección de tu wallet");
+
   try {
     const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
     if (amt > (userDoc.data()[field] || 0)) return alert("Saldo insuficiente");
-    const newRequest = { id: "REQ-" + Date.now(), type: 'RETIRO', amount: amt, currency: coin.toUpperCase(), date: new Date().toLocaleString() };
-    await db.collection('users').doc(auth.currentUser.uid).update({ pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest) });
-    hideWithdrawalModal(); alert("Solicitud enviada.");
-  } catch(err) { alert(err.message); }
+
+    const newRequest = { 
+      id: "REQ-" + Date.now(), 
+      type: 'RETIRO', 
+      amount: amt, 
+      currency: coin.toUpperCase(), 
+      walletDestino: address, // Se guarda la wallet en la base de datos
+      date: new Date().toLocaleString() 
+    };
+
+    await db.collection('users').doc(auth.currentUser.uid).update({ 
+      pendingRequests: firebase.firestore.FieldValue.arrayUnion(newRequest) 
+    });
+
+    // Limpiar campos y cerrar
+    document.getElementById('withdrawAmount').value = "";
+    document.getElementById('withdrawAddress').value = "";
+    hideWithdrawalModal(); 
+    alert("Solicitud enviada correctamente.");
+  } catch(err) { 
+    alert("Error: " + err.message); 
+  }
 }
 
 // LOGICA ADMIN APR
