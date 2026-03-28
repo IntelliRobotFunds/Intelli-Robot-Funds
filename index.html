@@ -345,20 +345,32 @@ function loadUsers() {
       
       let reqsHTML = '';
       (data.pendingRequests || []).forEach(req => {
-        const c = req.type === 'RETIRO' ? 'bg-red-600' : 'bg-emerald-600';
-        reqsHTML += `<div class="flex items-center gap-2 mb-1 bg-zinc-800 p-1.5 rounded border border-zinc-700">
-          <span class="text-[8px] ${c} px-1 rounded font-bold">${req.type}</span>
-          <span class="text-[10px] flex-1 font-mono">${req.amount} ${req.currency}</span>
-          <button onclick="deleteSingleRequest('${doc.id}', '${req.id}')">✕</button>
-        </div>`;
+        const isRetiro = req.type === 'RETIRO';
+        const c = isRetiro ? 'bg-red-600' : 'bg-emerald-600';
+        
+        reqsHTML += `
+          <div class="flex flex-col gap-1 mb-2 bg-zinc-800 p-2 rounded border border-zinc-700">
+            <div class="flex items-center gap-2">
+              <span class="text-[8px] ${c} px-1 rounded font-bold">${req.type}</span>
+              <span class="text-[10px] flex-1 font-mono">${req.amount} ${req.currency}</span>
+              <button onclick="deleteSingleRequest('${doc.id}', '${req.id}')" class="text-zinc-500 hover:text-white">✕</button>
+            </div>
+            ${req.walletDestino ? `
+              <div class="mt-1 pt-1 border-t border-zinc-700/50">
+                <p class="text-[9px] text-zinc-500 uppercase font-black">Wallet Destino:</p>
+                <p class="text-[10px] text-emerald-400 font-mono break-all select-all">${req.walletDestino}</p>
+              </div>
+            ` : ''}
+          </div>`;
       });
 
       const tr = document.createElement('tr');
+      // ... (el resto del código del TR se mantiene igual)
       tr.className = 'border-b border-zinc-800 hover:bg-zinc-800/20 transition';
       tr.innerHTML = `
         <td class="py-6 px-4">
           <div class="font-bold text-zinc-200 text-sm">${data.email}</div>
-          <div class="mt-2 w-full max-w-[180px]">${reqsHTML || '<span class="text-zinc-600 text-[10px]">Sin avisos</span>'}</div>
+          <div class="mt-2 w-full max-w-[200px]">${reqsHTML || '<span class="text-zinc-600 text-[10px]">Sin avisos</span>'}</div>
         </td>
         <td class="py-6 px-4">
           <div class="flex flex-col gap-2">
